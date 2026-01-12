@@ -55,7 +55,10 @@ franchiseRouter.docs = [
   },
 ];
 
-// getFranchises
+/**
+ * Method to get Franchises. Calls the database to getFranchises, passing in the request, and gets the franchises and if there are more franchises left.
+ * @returns json of the list of franchises and boolean of it there are more franchises
+ */
 franchiseRouter.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -64,7 +67,11 @@ franchiseRouter.get(
   })
 );
 
-// getUserFranchises
+/**
+ * Method to get User Franchises. Gets the userID from the request, and checks to see if that is a valid Number, and also if the user is an Admin. Then if the
+ *   user is an Admin, it will get the franchises associated with the User.
+ * @returns an empty array or an array of franchises the user has.
+ */
 franchiseRouter.get(
   '/:userId',
   authRouter.authenticateToken,
@@ -79,7 +86,10 @@ franchiseRouter.get(
   })
 );
 
-// createFranchise
+/**
+ * Method to create a Franchise. If the user is not an admin, throws a 403 error, stating that they can't create a franchise. Otherwise, it will 
+ *   return the response from going into the database and creating a new Franchise. 
+ */
 franchiseRouter.post(
   '/',
   authRouter.authenticateToken,
@@ -93,7 +103,10 @@ franchiseRouter.post(
   })
 );
 
-// deleteFranchise
+/**
+ * Method to delete a franchise. Checks to see if the franchiseID from the request is a valid number, then calls the database to delete said franchise. 
+ * @returns Json of "franchise deleted"
+ */
 franchiseRouter.delete(
   '/:franchiseId',
   asyncHandler(async (req, res) => {
@@ -103,7 +116,11 @@ franchiseRouter.delete(
   })
 );
 
-// createStore
+/**
+ * Method to create a store. First checks to see if the franchiseID is a valid Number, and then gets that franchise from the database. Then if the franchise is
+ *   null, or if the user is not an Admin and not an admin of that franchise, then it will return a 403 error saying they are unable to create a store. 
+ *   Otherwise it will return the json version of the response of entering the database and creating a store. 
+ */
 franchiseRouter.post(
   '/:franchiseId/store',
   authRouter.authenticateToken,
@@ -118,7 +135,11 @@ franchiseRouter.post(
   })
 );
 
-// deleteStore
+/**
+ * Method to delete a store. Checks to make sure the franchiseID is a valid number, then gets the frnachise with that ID. Then if that franchise is null, or
+ *   if the user is not an Admin, or is not an Admin of that Franchise, then it returns a 403 error stating that they are unable to delete a store. If not, then
+ *   it checks to see if the storeID is a valid number, and passes that to the database to delete that store. It finally returns the json version of "store deleted"
+ */
 franchiseRouter.delete(
   '/:franchiseId/store/:storeId',
   authRouter.authenticateToken,
