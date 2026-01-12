@@ -203,6 +203,15 @@ class DB {
     }
   }
 
+  /**
+   * SQL LIKE operator searches for a specific pattern in a column. For example, if you put %the% as the nameFiler, it will
+   *   get all the Franchises that have the word 'the' in it
+   * @param {*} authUser 
+   * @param {*} page 
+   * @param {*} limit 
+   * @param {*} nameFilter 
+   * @returns 
+   */
   async getFranchises(authUser, page = 0, limit = 10, nameFilter = '*') {
     const connection = await this.getConnection();
 

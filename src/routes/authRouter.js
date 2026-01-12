@@ -31,6 +31,13 @@ authRouter.docs = [
   },
 ];
 
+/**
+ * If there is an authToken, checks to see if it is valid by trying to get a userID connected to the 
+ *   authToken from the database. Then calls the `next` parameter as a function
+ * @param {*} req 
+ * @param {*} res 
+ * @param {*} next 
+ */
 async function setAuthUser(req, res, next) {
   const token = readAuthToken(req);
   if (token) {
