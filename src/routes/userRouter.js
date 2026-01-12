@@ -24,7 +24,10 @@ userRouter.docs = [
   },
 ];
 
-// getUser
+/**
+ * Method to get the current User. 
+ * @returns the json of the user in the request
+ */
 userRouter.get(
   '/me',
   authRouter.authenticateToken,
@@ -33,7 +36,12 @@ userRouter.get(
   })
 );
 
-// updateUser
+/**
+ * Method to update user. Makes sure the userID is a valid number, then checks to see if the user is an admin. If not an Admin, throws a 403 error. Otherwise, 
+ *   updates the database with the request information (userID, name, email, and password), then calls setAuth() to login the user. 
+ * @returns json of the updated User and the authToken. 
+ * @throws 403 "Unauthorized"
+ */
 userRouter.put(
   '/:userId',
   authRouter.authenticateToken,
@@ -51,7 +59,9 @@ userRouter.put(
   })
 );
 
-// deleteUser
+/**
+ * Method to Delete a User. NOT IMPLEMENTED
+ */
 userRouter.delete(
   '/:userId',
   authRouter.authenticateToken,
@@ -60,7 +70,9 @@ userRouter.delete(
   })
 );
 
-// listUsers
+/**
+ * Method to List Users. NOT IMPLEMENTED
+ */
 userRouter.get(
   '/',
   authRouter.authenticateToken,
