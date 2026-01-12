@@ -40,7 +40,10 @@ orderRouter.docs = [
   },
 ];
 
-// getMenu
+/**
+ * Method to get the Menu. 
+ * @return json response of the database's menu.
+ */
 orderRouter.get(
   '/menu',
   asyncHandler(async (req, res) => {
@@ -48,7 +51,11 @@ orderRouter.get(
   })
 );
 
-// addMenuItem
+/**
+ * Method to add menu item. First if the user is not an Admin, sends back a 403 error saying they are unable to add menu item. Then it gets the request and 
+ *   takes the body to send to the database to add the menu item into it. 
+ * @returns json response of the database's menu.
+ */
 orderRouter.put(
   '/menu',
   authRouter.authenticateToken,
@@ -63,7 +70,10 @@ orderRouter.put(
   })
 );
 
-// getOrders
+/**
+ * Method to get Orders of a specific user. Uses the requset's user and query page amount to get that many items from the database. 
+ * @returns json of that many items from the user's order database
+ */
 orderRouter.get(
   '/',
   authRouter.authenticateToken,
@@ -72,7 +82,13 @@ orderRouter.get(
   })
 );
 
-// createOrder
+/**
+ * Method to create an order. Adds the order Request to the database for the user's order. Then sends a [GET] /api/order request to the factory to 
+ *   actually complete the order. If successful, sends back a succesfull message along with the newly bought JWT order, otherwise, it will send back
+ *   a 500 error stating that the order failed to fulfill order at the factory.
+ * @returns JWT order
+ * @throws 500 error
+ */
 orderRouter.post(
   '/',
   authRouter.authenticateToken,
