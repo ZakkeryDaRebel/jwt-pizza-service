@@ -56,6 +56,7 @@ async function setAuthUser(req, res, next) {
 
 /**
  * Method to authenticate the token. If the user is not null, then we call the `next` parameter function. Otherwise send a 401 Unauthorized message.
+ * TODO: Add Database checking, probably
  * @param {*} req request
  * @param {*} res response
  * @param {*} next function to call next
