@@ -2,7 +2,6 @@ const request = require('supertest');
 const app = require('./service.js');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
-let testUserAuthToken;
 
 beforeAll(async () => {
   testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
@@ -15,6 +14,8 @@ test('login', async () => {
   expect(loginRes.status).toBe(200);
   expect(loginRes.body.token).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
 
-  const { password, ...user } = { ...testUser, roles: [{ role: 'diner' }] };
+  const {...user } = { ...testUser, roles: [{ role: 'diner' }] };
+  delete user.password;
   expect(loginRes.body.user).toMatchObject(user);
+  expect(loginRes.body.token).not.toBe(testUserAuthToken);
 });
