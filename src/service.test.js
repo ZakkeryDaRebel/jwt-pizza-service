@@ -20,3 +20,10 @@ test('login', async () => {
   expect(loginRes.body.user).toMatchObject(user);
   expect(loginRes.body.token).not.toBe(testUserAuthToken);
 });
+
+test('get cities', async () => {
+  const getCitiesRes = await request(app).get('/cities');
+  expect(getCitiesRes.status).toBe(200);
+  expect(getCitiesRes.headers['content-type']).toMatch('application/json; charset=utf-8');
+  expect(getCitiesRes.body).toMatchObject([{ name: 'Provo', population: 116618 }]);
+});
