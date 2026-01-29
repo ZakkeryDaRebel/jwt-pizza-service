@@ -346,6 +346,8 @@ class DB {
         await connection.query(`CREATE DATABASE IF NOT EXISTS ${config.db.connection.database}`);
         await connection.query(`USE ${config.db.connection.database}`);
 
+        console.log(await connection.query('SELECT * FROM user LIMIT 10'));
+
         if (!dbExists) {
           console.log('Successfully created database');
         }
