@@ -72,3 +72,12 @@ jobs:
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
           color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
           curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
+
+      - name: Check coverage threshold
+        run: |
+          coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          if (( $(echo "$coverage < 80" | bc -l) )); then
+            echo "❌ Coverage is $coverage%, which is below the 80% threshold"
+            exit 1
+          fi
+          echo "✅ Coverage is $coverage%, which meets the 80% threshold"

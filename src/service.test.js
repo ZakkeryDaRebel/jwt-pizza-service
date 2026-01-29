@@ -40,4 +40,62 @@ describe('franchiseRouter tests', () => {
         expect(res.body).toHaveProperty('more');
         expect(typeof res.body.more).toBe('boolean');
     });
+
+    test('get user franchises', async () => {
+        const res = await request(app).get('/api/franchise/1').set('Authorization', `Bearer ${testUserAuthToken}`).send();
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    // test('create franchise', async () => {
+        
+    // })
+});
+
+describe('order tests', () => {
+    test('get menu', async () => {
+        const res = await request(app).get('/api/order/menu').send();
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    // test('add menu item', async () => {
+    //     const res = await request(app).put('/api/order/menu').send({ name: 'Test Pizza', description: 'A pizza for testing', price: 9.99  }).set('Authorization', `Bearer ${testUserAuthToken}`);
+    //     expect(res.status).toBe(403);
+    // });
+
+    test('get user orders', async () => {
+        const res = await request(app).get('/api/order/').set('Authorization', `Bearer ${testUserAuthToken}`).send();
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('orders');
+        expect(res.body.orders).toBeInstanceOf(Array);
+    });
+
+    test('order', async () => {
+        
+    });
+});
+
+describe('user tests', () => {
+    let userID = null;
+    test('get user', async () => {
+        const res = await request(app).get('/api/user/me').set('Authorization', `Bearer ${testUserAuthToken}`).send();
+        expect(res.status).toBe(200);
+        const {...user } = { ...testUser, roles: [{ role: 'diner' }] };
+        delete user.password;
+        expect(res.body).toMatchObject(user);
+        expect(res.body).toHaveProperty('id');
+        expect(res.body.id).toBeGreaterThan(0);
+        userID = res.body.id;
+    });
+
+    test('update user', async () => {
+        const newName = 'updated pizza diner';
+        const res = await request(app).put('/api/user/'+userID).set('Authorization', `Bearer ${testUserAuthToken}`).send({ name: newName, email: testUser.email, password: testUser.password });
+        expect(res.status).toBe(200);
+        expect(res.body.user.name).toBe(newName);
+        expect(res.body.user.email).toBe(testUser.email);
+        expect(res.body).toHaveProperty('token');
+        expect(res.body.token).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
+    });
 });
