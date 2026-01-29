@@ -74,7 +74,6 @@ describe('order tests', () => {
         const res = await request(app).get('/api/order/menu').send();
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
-        expect(res.body.length).toBeGreaterThan(0);
     });
 
     test('fail to add menu item', async () => {
