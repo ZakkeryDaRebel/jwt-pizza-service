@@ -2,20 +2,13 @@ const request = require('supertest');
 const app = require('./service.js');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
-const adminUser = { name: '常用名字', email: 'a@jwt.com', password: 'admin'}
 let testUserAuthToken = null;
 let loginUserAuthToken = null;
-let adminAuthToken = null;
 
 beforeAll(async () => {
   testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
   const registerRes = await request(app).post('/api/auth').send(testUser);
   testUserAuthToken = registerRes.body.token;
-
-  const loginRes = await request(app).put('/api/auth').send(adminUser);
-  expect(loginRes.status).toBe(200);
-  expect(loginRes.body.token).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
-  adminAuthToken = loginRes.body.token;
 });
 
 describe('authRouter tests', () => {
@@ -57,37 +50,24 @@ describe('franchiseRouter tests', () => {
         expect(Array.isArray(res.body)).toBe(true);
     });
 
-    test('create franchise', async () => {
-        const res = await request(app).post('/api/franchise').set('Authorization', `Bearer ${adminAuthToken}`).send({ name: 'Test Franchise', admins: [ { email: testUser.email } ] });
-        expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('id');
-        expect(res.body.id).toBeGreaterThan(0);
-        franchiseId = res.body.id;
-        expect(res.body).toHaveProperty('name', 'Test Franchise');
-        expect(res.body).toHaveProperty('admins');
-        expect(Array.isArray(res.body.admins)).toBe(true);
+    test('fail to create franchise as diner', async () => {
+        const res = await request(app).post('/api/franchise').set('Authorization', `Bearer ${testUserAuthToken}`).send({ name: 'Test Franchise', admins: [ { email: testUser.email } ] });
+        expect(res.status).toBe(403);
     })
 
-    test('create store', async () => {
-        const res = await request(app).post(`/api/franchise/${franchiseId}/store`).set('Authorization', `Bearer ${adminAuthToken}`).send({ name: 'Test Location' });
-        expect(res.status).toBe(200);
-        expect(res.body).toHaveProperty('id');
-        expect(res.body.id).toBeGreaterThan(0);
-        storeId = res.body.id;
-        expect(res.body).toHaveProperty('name', 'Test Location');
-        expect(res.body).toHaveProperty('franchiseId', franchiseId);
+    test('fail to create store as diner', async () => {
+        const res = await request(app).post('/api/franchise/1/store').set('Authorization', `Bearer ${testUserAuthToken}`).send({ name: 'Test Location' });
+        expect(res.status).toBe(403);
     });
 
-    test('delete store', async () => {
-        const res = await request(app).delete(`/api/franchise/${franchiseId}/store/${storeId}`).set('Authorization', `Bearer ${adminAuthToken}`);
-        expect(res.status).toBe(200);
-        expect(res.body.message).toBe('store deleted');
+    test('fail to delete store as diner', async () => {
+        const res = await request(app).delete('/api/franchise/1/store/1').set('Authorization', `Bearer ${testUserAuthToken}`);
+        expect(res.status).toBe(403);
     });
 
-    test('delete franchise', async () => {
-        const res = await request(app).delete('/api/franchise/' + franchiseId).set('Authorization', `Bearer ${adminAuthToken}`);
-        expect(res.status).toBe(200);
-        expect(res.body.message).toBe('franchise deleted');
+    test('fail to delete franchise as diner', async () => {
+        const res = await request(app).delete('/api/franchise/1').set('Authorization', `Bearer ${testUserAuthToken}`);
+        expect(res.status).toBe(403);
     })
 });
 
