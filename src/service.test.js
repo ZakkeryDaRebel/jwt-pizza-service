@@ -32,8 +32,6 @@ describe('authRouter tests', () => {
 });
 
 describe('franchiseRouter tests', () => {
-    let franchiseId = null;
-    let storeId = null;
 
     test('list franchises', async () => {
         const res = await request(app).get('/api/franchise?page=0&limit=10&name=*').send();
