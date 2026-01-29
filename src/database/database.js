@@ -359,7 +359,14 @@ class DB {
         console.log(await connection.query('SHOW TABLES'));
         console.log(await connection.query('SELECT * FROM user LIMIT 10'));
 
-        if (!dbExists) {
+        let adminInDatabase = false;
+        await connection.query('SELECT * FROM user WHERE name=?', ['常用名字']).then((rows) => {
+          if (rows[0].length > 0) {
+            adminInDatabase = true;
+          }
+        });
+
+        if (!adminInDatabase) {
           const defaultAdmin = { name: '常用名字', email: 'a@jwt.com', password: 'admin', roles: [{ role: Role.Admin }] };
           this.addUser(defaultAdmin);
         }
