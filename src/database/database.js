@@ -339,14 +339,11 @@ class DB {
     try {
       const connection = await this._getConnection(false);
       try {
-        //await connection.query('DROP DATABASE pizza');
         const dbExists = await this.checkDatabaseExists(connection);
         console.log(dbExists ? 'Database exists' : 'Database does not exist, creating it');
 
         await connection.query(`CREATE DATABASE IF NOT EXISTS ${config.db.connection.database}`);
         await connection.query(`USE ${config.db.connection.database}`);
-
-        console.log(await connection.query('SHOW TABLES'));
 
         if (!dbExists) {
           console.log('Successfully created database');
@@ -355,9 +352,6 @@ class DB {
         for (const statement of dbModel.tableCreateStatements) {
           await connection.query(statement);
         }
-
-        console.log(await connection.query('SHOW TABLES'));
-        console.log(await connection.query('SELECT * FROM user LIMIT 10'));
 
         let adminInDatabase = false;
         await connection.query('SELECT * FROM user WHERE name=?', ['常用名字']).then((rows) => {
