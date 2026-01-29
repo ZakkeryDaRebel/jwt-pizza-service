@@ -70,10 +70,21 @@ describe('franchiseRouter tests', () => {
 });
 
 describe('order tests', () => {
+    let menuItem = null;
+
     test('get menu', async () => {
         const res = await request(app).get('/api/order/menu').send();
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+        menuItem = {
+            menuId: res.body[0].id,
+            title: res.body[0].title,
+            image: res.body[0].image,
+            description: res.body[0].description,
+            price: res.body[0].price
+        }
+        console.log(menuItem);
     });
 
     test('fail to add menu item', async () => {
@@ -89,7 +100,7 @@ describe('order tests', () => {
     });
 
     test('order', async () => {
-        const orderReq = { franchiseId: 1, storeId: 1, items: [ { menuId: 1, description: 'Veggie', price: 0.05 } ] };
+        const orderReq = { franchiseId: 1, storeId: 1, items: [ menuItem ] };
         const res = await request(app).post('/api/order/').set('Authorization', `Bearer ${testUserAuthToken}`).send(orderReq);
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty('order');
