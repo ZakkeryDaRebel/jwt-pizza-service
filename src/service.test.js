@@ -2,7 +2,7 @@ const request = require('supertest');
 const app = require('./service.js');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
-const adminUser = { name: 'admin', email: 'a@jwt.com', password: 'admin'}
+const adminUser = { name: '常用名字', email: 'a@jwt.com', password: 'admin'}
 let testUserAuthToken = null;
 let loginUserAuthToken = null;
 let adminAuthToken = null;
