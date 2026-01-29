@@ -1,5 +1,6 @@
 const request = require('supertest');
 const app = require('./service.js');
+const { DB } = require('./database/database.js');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 const adminUser = { name: '常用名字', email: 'a@jwt.com', password: 'admin' };
@@ -8,6 +9,9 @@ let loginUserAuthToken = null;
 let adminAuthToken = null;
 
 beforeAll(async () => {
+  // Wait for database initialization to complete
+  await DB.initialized;
+  
   testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
   const registerRes = await request(app).post('/api/auth').send(testUser);
   testUserAuthToken = registerRes.body.token;
