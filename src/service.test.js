@@ -2,13 +2,20 @@ const request = require('supertest');
 const app = require('./service.js');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
+const adminUser = { name: 'admin', email: 'a@jwt.com', password: 'admin'}
 let testUserAuthToken = null;
 let loginUserAuthToken = null;
+let adminAuthToken = null;
 
 beforeAll(async () => {
   testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
   const registerRes = await request(app).post('/api/auth').send(testUser);
   testUserAuthToken = registerRes.body.token;
+
+  const loginRes = await request(app).put('/api/auth').send(adminUser);
+  expect(loginRes.status).toBe(200);
+  expect(loginRes.body.token).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
+  adminAuthToken = loginRes.body.token;
 });
 
 describe('authRouter tests', () => {
@@ -32,6 +39,9 @@ describe('authRouter tests', () => {
 });
 
 describe('franchiseRouter tests', () => {
+    let franchiseId = null;
+    let storeId = null;
+
     test('list franchises', async () => {
         const res = await request(app).get('/api/franchise?page=0&limit=10&name=*').send();
         expect(res.status).toBe(200);
@@ -47,9 +57,38 @@ describe('franchiseRouter tests', () => {
         expect(Array.isArray(res.body)).toBe(true);
     });
 
-    // test('create franchise', async () => {
-        
-    // })
+    test('create franchise', async () => {
+        const res = await request(app).post('/api/franchise').set('Authorization', `Bearer ${adminAuthToken}`).send({ name: 'Test Franchise', admins: [ { email: testUser.email } ] });
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('id');
+        expect(res.body.id).toBeGreaterThan(0);
+        franchiseId = res.body.id;
+        expect(res.body).toHaveProperty('name', 'Test Franchise');
+        expect(res.body).toHaveProperty('admins');
+        expect(Array.isArray(res.body.admins)).toBe(true);
+    })
+
+    test('create store', async () => {
+        const res = await request(app).post(`/api/franchise/${franchiseId}/store`).set('Authorization', `Bearer ${adminAuthToken}`).send({ name: 'Test Location' });
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('id');
+        expect(res.body.id).toBeGreaterThan(0);
+        storeId = res.body.id;
+        expect(res.body).toHaveProperty('name', 'Test Location');
+        expect(res.body).toHaveProperty('franchiseId', franchiseId);
+    });
+
+    test('delete store', async () => {
+        const res = await request(app).delete(`/api/franchise/${franchiseId}/store/${storeId}`).set('Authorization', `Bearer ${adminAuthToken}`);
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('store deleted');
+    });
+
+    test('delete franchise', async () => {
+        const res = await request(app).delete('/api/franchise/' + franchiseId).set('Authorization', `Bearer ${adminAuthToken}`);
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('franchise deleted');
+    })
 });
 
 describe('order tests', () => {
@@ -59,10 +98,10 @@ describe('order tests', () => {
         expect(Array.isArray(res.body)).toBe(true);
     });
 
-    // test('add menu item', async () => {
-    //     const res = await request(app).put('/api/order/menu').send({ name: 'Test Pizza', description: 'A pizza for testing', price: 9.99  }).set('Authorization', `Bearer ${testUserAuthToken}`);
-    //     expect(res.status).toBe(403);
-    // });
+    test('fail to add menu item', async () => {
+        const res = await request(app).put('/api/order/menu').send({ name: 'Test Pizza', description: 'A pizza for testing', price: 9.99  }).set('Authorization', `Bearer ${testUserAuthToken}`);
+        expect(res.status).toBe(403);
+    });
 
     test('get user orders', async () => {
         const res = await request(app).get('/api/order/').set('Authorization', `Bearer ${testUserAuthToken}`).send();
@@ -72,7 +111,12 @@ describe('order tests', () => {
     });
 
     test('order', async () => {
-        
+        const orderReq = { franchiseId: 1, storeId: 1, items: [ { menuId: 1, description: 'Veggie', price: 0.05 } ] };
+        const res = await request(app).post('/api/order/').set('Authorization', `Bearer ${testUserAuthToken}`).send(orderReq);
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('order');
+        expect(res.body).toHaveProperty('jwt');
+        expect(res.body.jwt).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
     });
 });
 
