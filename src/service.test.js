@@ -311,4 +311,17 @@ async function registerUser(service) {
 function randomName() {
   return Math.random().toString(36).substring(2, 12);
 }
+
+test('delete user with no authToken', async () => {
+    const deleteRes = await request(app).delete('/api/user/' + 1);
+    expect(deleteRes.status).toBe(401);
+});
+
+test('delete user not as an admin', async () => {
+    const [, userToken] = await registerUser(request(app));
+    const deleteRes = await request(app)
+    .delete('/api/user/' + 1)
+    .set('Authorization', 'Bearer ' + userToken);
+    expect(deleteRes.status).toBe(401);
+});
 });
