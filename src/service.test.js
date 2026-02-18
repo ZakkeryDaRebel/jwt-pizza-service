@@ -296,6 +296,26 @@ describe('user tests', () => {
         expect(Array.isArray(listUsersRes.body.users)).toBe(true);
     });
 
+    test('list users with no offset has admin', async () => {
+        const listUsersRes = await request(app)
+        .get('/api/user?limit=5')
+        .set('Authorization', 'Bearer ' + adminAuthToken);
+        expect(listUsersRes.status).toBe(200);
+        expect(listUsersRes.body).toHaveProperty('users');
+        expect(Array.isArray(listUsersRes.body.users)).toBe(true);
+        expect(listUsersRes.body.users.some(user => user.roles.some(role => role.role === 'admin'))).toBe(true);
+    });
+
+    test('list users with offset doesnt have admin', async () => {
+        const listUsersRes = await request(app)
+        .get('/api/user?page=1&limit=5')
+        .set('Authorization', 'Bearer ' + adminAuthToken);
+        expect(listUsersRes.status).toBe(200);
+        expect(listUsersRes.body).toHaveProperty('users');
+        expect(Array.isArray(listUsersRes.body.users)).toBe(true);
+        expect(listUsersRes.body.users.some(user => user.roles.some(role => role.role === 'admin'))).toBe(false);
+    });
+
 async function registerUser(service) {
   const testUser = {
     name: 'pizza diner',
