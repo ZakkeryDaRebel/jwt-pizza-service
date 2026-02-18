@@ -333,4 +333,11 @@ test('delete user as admin', async () => {
     expect(deleteRes.status).toBe(200);
     expect(deleteRes.body.message).toBe('user deleted');
 });
+
+test('delete non-existent user as admin', async () => {
+    const deleteRes = await request(app)
+    .delete('/api/user/9999')
+    .set('Authorization', 'Bearer ' + adminAuthToken);
+    expect(deleteRes.status).toBe(200);
+});
 });
