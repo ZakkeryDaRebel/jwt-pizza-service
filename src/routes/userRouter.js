@@ -77,7 +77,11 @@ userRouter.put(
 );
 
 /**
- * Method to Delete a User. NOT IMPLEMENTED
+ * Method to Delete a User. 
+ * Will require the user to be an Admin, otherwise will throw a 401 unauthorized exception. Then it will use the userID from the request to delete the user from the 
+ *   database.
+ * @returns json of a message saying the user was deleted.
+ * @throws 401 "Unauthorized"
  */
 userRouter.delete(
   '/:userId',
@@ -92,9 +96,12 @@ userRouter.delete(
   })
 );
 
-//TODO: IMPLEMENT
 /**
- * Method to List Users. NOT IMPLEMENTED
+ * Method to List Users. 
+ * Will require the user to be an Admin, otherwise will throw a 401 unauthorized exception. Then it will use the parameters to get a list of users from the database, 
+ *   returning that list of users and a boolean of if there are more users to get.
+ * @returns json of the list of users and boolean of it there are more users
+ * @throws 401 "Unauthorized"
  */
 userRouter.get(
   '/',
