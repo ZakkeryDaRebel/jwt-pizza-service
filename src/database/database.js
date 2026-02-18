@@ -98,7 +98,7 @@ class DB {
       }
 
       for (const user of users) {
-        user.roles = await this.query(connection, `SELECT role, objectId FROM userRole WHERE userId=?`, [user.id]);
+        user.roles = await this.query(connection, `SELECT role FROM userRole WHERE userId=?`, [user.id]);
       }
       return [users, more];
     } finally {
