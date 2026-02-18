@@ -82,13 +82,13 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/ZakkeryDaRebel/jwt-pizza-service-docker-image:${{ github.sha }} .
-          docker tag ghcr.io/ZakkeryDaRebel/jwt-pizza-service-docker-image:${{ github.sha }} ghcr.io/ZakkeryDaRebel/jwt-pizza-service-docker-image:latest
+          docker build -t ghcr.io/zakkerydarebel/jwt-pizza-service-docker-image:${{ github.sha }} .
+          docker tag ghcr.io/zakkerydarebel/jwt-pizza-service-docker-image:${{ github.sha }} ghcr.io/zakkerydarebel/jwt-pizza-service-docker-image:latest
 
       - name: Push Docker image to GHCR
         run: |
-          docker push ghcr.io/ZakkeryDaRebel/jwt-pizza-service-docker-image:${{ github.sha }}
-          docker push ghcr.io/ZakkeryDaRebel/jwt-pizza-service-docker-image:latest
+          docker push ghcr.io/zakkerydarebel/jwt-pizza-service-docker-image:${{ github.sha }}
+          docker push ghcr.io/zakkerydarebel/jwt-pizza-service-docker-image:latest
       - name: Check coverage threshold
         run: |
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
