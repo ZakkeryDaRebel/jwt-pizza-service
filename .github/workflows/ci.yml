@@ -43,7 +43,7 @@ jobs:
             jwtSecret: '${{ secrets.JWT_SECRET }}',
             db: {
               connection: {
-                host: '127.0.0.1',
+                host: process.env.DB_HOST || '127.0.0.1',
                 user: 'root',
                 password: 'tempdbpassword',
                 database: 'pizza',
