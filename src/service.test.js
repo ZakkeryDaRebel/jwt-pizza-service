@@ -324,4 +324,13 @@ test('delete user not as an admin', async () => {
     .set('Authorization', 'Bearer ' + userToken);
     expect(deleteRes.status).toBe(401);
 });
+
+test('delete user as admin', async () => {
+    const [user] = await registerUser(request(app));
+    const deleteRes = await request(app)
+    .delete('/api/user/' + user.id)
+    .set('Authorization', 'Bearer ' + adminAuthToken);
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.message).toBe('user deleted');
+});
 });

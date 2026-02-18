@@ -130,6 +130,23 @@ class DB {
     }
   }
 
+  async deleteUser(userID) {
+    const connection = await this.getConnection();
+    try {
+      await connection.beginTransaction();
+      try {
+        await this.query(connection, `DELETE FROM userRole WHERE userId=?`, [userID]);
+        await this.query(connection, `DELETE FROM user WHERE id=?`, [userID]);
+        await connection.commit();
+      } catch {
+        await connection.rollback();
+        throw new StatusCodeError('unable to delete user', 500);
+      }
+    } finally {
+      connection.end();
+    }
+  }
+
   async loginUser(userId, token) {
     token = this.getTokenSignature(token);
     const connection = await this.getConnection();
