@@ -409,8 +409,19 @@ class DB {
         });
 
         if (!adminInDatabase) {
-          const defaultAdmin = { name: '常用名字', email: 'a@jwt.com', password: 'admin', roles: [{ role: Role.Admin }] };
-          this.addUser(defaultAdmin);
+          const hashedPassword = await bcrypt.hash('admin', 10);
+
+          const userResult = await connection.execute(
+            `INSERT INTO user (name, email, password) VALUES (?, ?, ?)`,
+            ['常用名字', 'a@jwt.com', hashedPassword]
+          );
+
+          const userId = userResult[0].insertId;
+
+          await connection.execute(
+            `INSERT INTO userRole (userId, role, objectId) VALUES (?, ?, ?)`,
+            [userId, Role.Admin, 0]
+          );
         }
       } finally {
         connection.end();
