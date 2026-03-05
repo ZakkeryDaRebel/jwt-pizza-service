@@ -401,26 +401,22 @@ class DB {
           await connection.query(statement);
         }
 
-        let adminInDatabase = false;
-        await connection.query('SELECT * FROM user WHERE name=?', ['常用名字']).then((rows) => {
-          if (rows[0].length > 0) {
-            adminInDatabase = true;
-          }
-        });
+        const [rows] = await connection.execute(
+          `SELECT * FROM userRole WHERE role=?`,
+          [Role.Admin]
+        );
 
-        if (!adminInDatabase) {
+        if (rows.length === 0) {
           const hashedPassword = await bcrypt.hash('admin', 10);
 
-          const userResult = await connection.execute(
+          const [result] = await connection.execute(
             `INSERT INTO user (name, email, password) VALUES (?, ?, ?)`,
             ['常用名字', 'a@jwt.com', hashedPassword]
           );
 
-          const userId = userResult[0].insertId;
-
           await connection.execute(
             `INSERT INTO userRole (userId, role, objectId) VALUES (?, ?, ?)`,
-            [userId, Role.Admin, 0]
+            [result.insertId, Role.Admin, 0]
           );
         }
       } finally {
