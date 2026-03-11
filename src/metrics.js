@@ -9,8 +9,8 @@ const requests = {};
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
-  const endpoint = `[${req.method}] ${req.path}`;
-  requests[endpoint] = (requests[endpoint] || 0) + 1;
+  const method = req.method;
+  requests[method] = (requests[method] || 0) + 1;
 
   //If the user has an id, and has sent a backend request,
   //  then it is considered an active user
@@ -92,23 +92,26 @@ function recordUserActivity(userId) {
 }
 
 function cleanupInactiveUsers() {
+    let queueIndex = 0;
     const now = Date.now();
 
-    while (activityQueue.length > 0) {
-        const event = activityQueue[0];
+    while (queueIndex < activityQueue.length) {
+        const event = activityQueue[queueIndex];
 
         if (now - event.time <= activeTime) {
             break; //remaning events are all recent
         }
 
-        activityQueue.shift();
-
+        //only remove the user if this was their last activity
         const lastActivity = activeUsers.get(event.userId);
-
-        //only remove if this event is still their latest
         if (lastActivity === event.time) {
             activeUsers.delete(event.userId);
         }
+        queueIndex++;
+    }
+
+    if (queueIndex > 0) {
+        activityQueue.splice(0, queueIndex);
     }
 }
 
@@ -120,8 +123,8 @@ setInterval(() => {
   const metrics = [];
 
   //HTTP Metrics
-  Object.keys(requests).forEach((endpoint) => {
-    metrics.push(createMetric('requests', requests[endpoint], '1', 'sum', 'asInt', { endpoint }));
+  Object.keys(requests).forEach((method) => {
+    metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
   });
 
   //Pizza Metrics
@@ -207,4 +210,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, pizzaPurchase, authAttempt, recordUserActivity };
+module.exports = { requestTracker, pizzaPurchase, authAttempt };
