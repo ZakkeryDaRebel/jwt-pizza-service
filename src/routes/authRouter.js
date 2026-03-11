@@ -125,6 +125,7 @@ authRouter.delete(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     await clearAuth(req);
+    metrics.userLoggedOut(req.user.id);
     res.json({ message: 'logout successful' });
   })
 );

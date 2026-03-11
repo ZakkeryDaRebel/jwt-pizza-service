@@ -14,8 +14,8 @@ function requestTracker(req, res, next) {
 
   //If the user has an id, and has sent a backend request,
   //  then it is considered an active user
-  if (req.user?.userId) {
-    recordUserActivity(req.user.userId);
+  if (req.user?.id) {
+    recordUserActivity(req.user.id);
   }
 
   next();
@@ -89,6 +89,11 @@ function recordUserActivity(userId) {
 
     activeUsers.set(userId, now);
     activityQueue.push({ userId, time: now });
+}
+
+function userLoggedOut(userId) {
+    if (!userId) return;
+    activeUsers.delete(userId);
 }
 
 function cleanupInactiveUsers() {
@@ -210,4 +215,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, pizzaPurchase, authAttempt };
+module.exports = { requestTracker, pizzaPurchase, authAttempt, userLoggedOut };
