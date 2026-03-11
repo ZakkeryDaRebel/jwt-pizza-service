@@ -11,6 +11,13 @@ const requests = {};
 function requestTracker(req, res, next) {
   const endpoint = `[${req.method}] ${req.path}`;
   requests[endpoint] = (requests[endpoint] || 0) + 1;
+
+  //If the user has an id, and has sent a backend request,
+  //  then it is considered an active user
+  if (req.user?.userId) {
+    recordUserActivity(req.user.userId);
+  }
+
   next();
 }
 
@@ -71,23 +78,39 @@ function getMemoryUsagePercentage() {
 //Active users Metrics
 //
 const activeUsers = new Map();
+const activityQueue = [];
 const minutesInMS = 60 * 1000;
 const activeTime = 15 * minutesInMS; 
 
-function recordUserActivity(userID) {
-    activeUsers.set(userID, Date.now())
-}
+function recordUserActivity(userId) {
+    if (!userId) return;
 
-cleanupInactiveUsers() {
     const now = Date.now();
 
-    for (const [userId, lastActivity] of activeUsers.entries()) {
-        if (now - lastActivity > activeTime) {
-            activeUsers.delete(userId);
+    activeUsers.set(userId, now);
+    activityQueue.push({ userId, time: now });
+}
+
+function cleanupInactiveUsers() {
+    const now = Date.now();
+
+    while (activityQueue.length > 0) {
+        const event = activityQueue[0];
+
+        if (now - event.time <= activeTime) {
+            break; //remaning events are all recent
+        }
+
+        activityQueue.shift();
+
+        const lastActivity = activeUsers.get(event.userId);
+
+        //only remove if this event is still their latest
+        if (lastActivity === event.time) {
+            activeUsers.delete(event.userId);
         }
     }
 }
-
 
 //
 //Send Metrics
@@ -115,6 +138,10 @@ setInterval(() => {
   //CPU & Memory Metrics
   metrics.push(createMetric('cpuUsage', getCpuUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
   metrics.push(createMetric('memoryUsage', getMemoryUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
+
+  //Active users Metrics
+  cleanupInactiveUsers();
+  metrics.push(createMetric('activeUsers', activeUsers.size, '1', 'gauge', 'asInt', {}));
 
   //Send Metrics
   sendMetricToGrafana(metrics);
@@ -180,4 +207,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, getCpuUsagePercentage, getMemoryUsagePercentage, pizzaPurchase, authAttempt };
+module.exports = { requestTracker, pizzaPurchase, authAttempt, recordUserActivity };
