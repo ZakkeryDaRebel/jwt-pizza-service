@@ -6,7 +6,7 @@
   "scripts": {
     "start": "cd src && node index.js",
     "build": "tsc",
-    "test": "jest",
+    "test": "NODE_ENV=test jest",
     "lint": "eslint ."
   },
   "license": "MIT",

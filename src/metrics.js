@@ -9,13 +9,15 @@ const requests = {};
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
+    console.log(req);
+    console.log(res);
   const method = req.method;
   requests[method] = (requests[method] || 0) + 1;
 
   //If the user has an id, and has sent a backend request,
   //  then it is considered an active user
-  if (req.user?.id) {
-    recordUserActivity(req.user.id);
+  if (req.user && (req.user.id || req.user.userId)) {
+    recordUserActivity(req.user.id || req.user.userId);
   }
 
   next();
@@ -217,4 +219,30 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, pizzaPurchase, authAttempt, userLoggedOut };
+module.exports = {
+  requestTracker,
+  pizzaPurchase,
+  authAttempt,
+  userLoggedOut,
+  recordUserActivity,
+
+  // expose internals for testing
+  _test: {
+    createMetric,
+    recordUserActivity,
+    cleanupInactiveUsers,
+    getCpuUsagePercentage,
+    getMemoryUsagePercentage,
+    activeUsers,
+    activityQueue,
+    requests,
+    get pizzasSold() { return pizzasSold; },
+    get revenue() { return revenue; },
+    get successfulOrders() { return successfulOrders; },
+    get failedOrders() { return failedOrders; },
+    get orderLatency() { return orderLatency; },
+    get orderCount() { return orderCount; },
+    get authSuccess() { return authSuccess; },
+    get authFailure() { return authFailure; },
+  },
+};
