@@ -1,6 +1,22 @@
 const config = require('./config');
 
 const os = require('os');
+
+//
+//HTTP Metrics
+//
+const requests = {};
+
+// Middleware to track requests
+function requestTracker(req, res, next) {
+  const endpoint = `[${req.method}] ${req.path}`;
+  requests[endpoint] = (requests[endpoint] || 0) + 1;
+  next();
+}
+
+//
+//Pizza Metrics
+//
 let pizzasSold = 0;
 let revenue = 0;
 let successfulOrders = 0;
@@ -8,6 +24,36 @@ let failedOrders = 0;
 let orderLatency = 0;
 let orderCount = 0;
 
+function pizzaPurchase(success, latency, amount, price) {
+  orderLatency += latency;
+  orderCount++;
+
+  if (success) {
+    successfulOrders++;
+    pizzasSold += amount;
+    revenue += price;
+  } else {
+    failedOrders++;
+  }
+}
+
+//
+//Auth metrics
+//
+let authSuccess = 0;
+let authFailure = 0;
+
+function authAttempt(success) {
+  if (success) {
+    authSuccess++;
+  } else {
+    authFailure++;
+  }
+}
+
+//
+//CPU & Memory Metrics
+//
 function getCpuUsagePercentage() {
   const cpuUsage = os.loadavg()[0] / os.cpus().length;
   return cpuUsage.toFixed(2) * 100;
@@ -21,55 +67,56 @@ function getMemoryUsagePercentage() {
   return memoryUsage.toFixed(2);
 }
 
-// Metrics stored in memory
-const requests = {};
-let greetingChangedCount = 0;
+//
+//Active users Metrics
+//
+const activeUsers = new Map();
+const minutesInMS = 60 * 1000;
+const activeTime = 15 * minutesInMS; 
 
-// Function to track when the greeting is changed
-function greetingChanged() {
-  greetingChangedCount++;
+function recordUserActivity(userID) {
+    activeUsers.set(userID, Date.now())
 }
 
-function pizzaPurchase(success, latency, amount, price) {
-  // Track latency totals
-  orderLatency += latency;
-  orderCount++;
+cleanupInactiveUsers() {
+    const now = Date.now();
 
-  if (success) {
-    successfulOrders++;
-    pizzasSold += amount;
-    revenue += price;
-  } else {
-    failedOrders++;
-  }
+    for (const [userId, lastActivity] of activeUsers.entries()) {
+        if (now - lastActivity > activeTime) {
+            activeUsers.delete(userId);
+        }
+    }
 }
 
-// Middleware to track requests
-function requestTracker(req, res, next) {
-  const endpoint = `[${req.method}] ${req.path}`;
-  requests[endpoint] = (requests[endpoint] || 0) + 1;
-  next();
-}
 
+//
+//Send Metrics
+//
 // This will periodically send metrics to Grafana
 setInterval(() => {
   const metrics = [];
+
+  //HTTP Metrics
   Object.keys(requests).forEach((endpoint) => {
     metrics.push(createMetric('requests', requests[endpoint], '1', 'sum', 'asInt', { endpoint }));
   });
 
-  metrics.push(createMetric('greetingChange', greetingChangedCount, '1', 'sum', 'asInt', {}));
-
+  //Pizza Metrics
   metrics.push(createMetric('pizzaSold', pizzasSold, '1', 'sum', 'asInt', {}));
-
   metrics.push(createMetric('pizzaRevenue', revenue, 'usd', 'sum', 'asDouble', {}));
-
   metrics.push(createMetric('pizzaOrdersSuccess', successfulOrders, '1', 'sum', 'asInt', {}));
-
   metrics.push(createMetric('pizzaOrdersFailed', failedOrders, '1', 'sum', 'asInt', {}));
-
   metrics.push(createMetric('pizzaOrderLatency', orderLatency / (orderCount || 1), 'ms', 'gauge', 'asDouble', {}));
 
+  //Auth Metrics
+  metrics.push(createMetric('authSuccess', authSuccess, '1', 'sum', 'asInt', {}));
+  metrics.push(createMetric('authFailure', authFailure, '1', 'sum', 'asInt', {}));
+
+  //CPU & Memory Metrics
+  metrics.push(createMetric('cpuUsage', getCpuUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
+  metrics.push(createMetric('memoryUsage', getMemoryUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
+
+  //Send Metrics
   sendMetricToGrafana(metrics);
 }, 10000);
 
@@ -133,4 +180,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, greetingChanged, getCpuUsagePercentage, getMemoryUsagePercentage, pizzaPurchase };
+module.exports = { requestTracker, getCpuUsagePercentage, getMemoryUsagePercentage, pizzaPurchase, authAttempt };
