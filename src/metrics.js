@@ -1,5 +1,26 @@
 const config = require('./config');
 
+const os = require('os');
+let pizzasSold = 0;
+let revenue = 0;
+let successfulOrders = 0;
+let failedOrders = 0;
+let orderLatency = 0;
+let orderCount = 0;
+
+function getCpuUsagePercentage() {
+  const cpuUsage = os.loadavg()[0] / os.cpus().length;
+  return cpuUsage.toFixed(2) * 100;
+}
+
+function getMemoryUsagePercentage() {
+  const totalMemory = os.totalmem();
+  const freeMemory = os.freemem();
+  const usedMemory = totalMemory - freeMemory;
+  const memoryUsage = (usedMemory / totalMemory) * 100;
+  return memoryUsage.toFixed(2);
+}
+
 // Metrics stored in memory
 const requests = {};
 let greetingChangedCount = 0;
@@ -7,6 +28,20 @@ let greetingChangedCount = 0;
 // Function to track when the greeting is changed
 function greetingChanged() {
   greetingChangedCount++;
+}
+
+function pizzaPurchase(success, latency, amount, price) {
+  // Track latency totals
+  orderLatency += latency;
+  orderCount++;
+
+  if (success) {
+    successfulOrders++;
+    pizzasSold += amount;
+    revenue += price;
+  } else {
+    failedOrders++;
+  }
 }
 
 // Middleware to track requests
@@ -24,6 +59,16 @@ setInterval(() => {
   });
 
   metrics.push(createMetric('greetingChange', greetingChangedCount, '1', 'sum', 'asInt', {}));
+
+  metrics.push(createMetric('pizzaSold', pizzasSold, '1', 'sum', 'asInt', {}));
+
+  metrics.push(createMetric('pizzaRevenue', revenue, 'usd', 'sum', 'asDouble', {}));
+
+  metrics.push(createMetric('pizzaOrdersSuccess', successfulOrders, '1', 'sum', 'asInt', {}));
+
+  metrics.push(createMetric('pizzaOrdersFailed', failedOrders, '1', 'sum', 'asInt', {}));
+
+  metrics.push(createMetric('pizzaOrderLatency', orderLatency / (orderCount || 1), 'ms', 'gauge', 'asDouble', {}));
 
   sendMetricToGrafana(metrics);
 }, 10000);
@@ -88,4 +133,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker, greetingChanged };
+module.exports = { requestTracker, greetingChanged, getCpuUsagePercentage, getMemoryUsagePercentage, pizzaPurchase };
