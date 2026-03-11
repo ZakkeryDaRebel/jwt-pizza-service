@@ -124,36 +124,38 @@ function cleanupInactiveUsers() {
 //Send Metrics
 //
 // This will periodically send metrics to Grafana
-setInterval(() => {
-  const metrics = [];
+if (process.env.NODE_ENV !== 'test') {
+    setInterval(() => {
+    const metrics = [];
 
-  //HTTP Metrics
-  Object.keys(requests).forEach((method) => {
-    metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
-  });
+    //HTTP Metrics
+    Object.keys(requests).forEach((method) => {
+        metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
+    });
 
-  //Pizza Metrics
-  metrics.push(createMetric('pizzaSold', pizzasSold, '1', 'sum', 'asInt', {}));
-  metrics.push(createMetric('pizzaRevenue', revenue, 'usd', 'sum', 'asDouble', {}));
-  metrics.push(createMetric('pizzaOrdersSuccess', successfulOrders, '1', 'sum', 'asInt', {}));
-  metrics.push(createMetric('pizzaOrdersFailed', failedOrders, '1', 'sum', 'asInt', {}));
-  metrics.push(createMetric('pizzaOrderLatency', orderLatency / (orderCount || 1), 'ms', 'gauge', 'asDouble', {}));
+    //Pizza Metrics
+    metrics.push(createMetric('pizzaSold', pizzasSold, '1', 'sum', 'asInt', {}));
+    metrics.push(createMetric('pizzaRevenue', revenue, 'usd', 'sum', 'asDouble', {}));
+    metrics.push(createMetric('pizzaOrdersSuccess', successfulOrders, '1', 'sum', 'asInt', {}));
+    metrics.push(createMetric('pizzaOrdersFailed', failedOrders, '1', 'sum', 'asInt', {}));
+    metrics.push(createMetric('pizzaOrderLatency', orderLatency / (orderCount || 1), 'ms', 'gauge', 'asDouble', {}));
 
-  //Auth Metrics
-  metrics.push(createMetric('authSuccess', authSuccess, '1', 'sum', 'asInt', {}));
-  metrics.push(createMetric('authFailure', authFailure, '1', 'sum', 'asInt', {}));
+    //Auth Metrics
+    metrics.push(createMetric('authSuccess', authSuccess, '1', 'sum', 'asInt', {}));
+    metrics.push(createMetric('authFailure', authFailure, '1', 'sum', 'asInt', {}));
 
-  //CPU & Memory Metrics
-  metrics.push(createMetric('cpuUsage', getCpuUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
-  metrics.push(createMetric('memoryUsage', getMemoryUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
+    //CPU & Memory Metrics
+    metrics.push(createMetric('cpuUsage', getCpuUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
+    metrics.push(createMetric('memoryUsage', getMemoryUsagePercentage(), 'percent', 'gauge', 'asDouble', {}));
 
-  //Active users Metrics
-  cleanupInactiveUsers();
-  metrics.push(createMetric('activeUsers', activeUsers.size, '1', 'gauge', 'asInt', {}));
+    //Active users Metrics
+    cleanupInactiveUsers();
+    metrics.push(createMetric('activeUsers', activeUsers.size, '1', 'gauge', 'asInt', {}));
 
-  //Send Metrics
-  sendMetricToGrafana(metrics);
-}, 10000);
+    //Send Metrics
+    sendMetricToGrafana(metrics);
+    }, 10000);
+}
 
 function createMetric(metricName, metricValue, metricUnit, metricType, valueType, attributes) {
   attributes = { ...attributes, source: config.source };
