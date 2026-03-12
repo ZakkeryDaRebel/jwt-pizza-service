@@ -191,7 +191,7 @@ function createMetric(metricName, metricValue, metricUnit, metricType, valueType
 }
 
 function sendMetricToGrafana(metrics) {
-  const body = {
+    const body = {
     resourceMetrics: [
       {
         scopeMetrics: [
@@ -202,6 +202,8 @@ function sendMetricToGrafana(metrics) {
       },
     ],
   };
+  console.log(body);
+  //TODO: Remove once working
 
   fetch(`${config.endpointUrl}`, {
     method: 'POST',
@@ -209,6 +211,8 @@ function sendMetricToGrafana(metrics) {
     headers: { Authorization: `Bearer ${config.accountId}:${config.apiKey}`, 'Content-Type': 'application/json' },
   })
     .then((response) => {
+        console.log(response);
+        //TODO: Remove once working
       if (!response.ok) {
         throw new Error(`HTTP status: ${response.status}`);
       }
