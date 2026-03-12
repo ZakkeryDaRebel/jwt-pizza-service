@@ -65,7 +65,7 @@ userRouter.get(
 userRouter.put(
   '/:userId',
   authRouter.authenticateToken,
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req, res) => {    
     const { name, email, password } = req.body;
     const userId = Number(req.params.userId);
     const user = req.user;
