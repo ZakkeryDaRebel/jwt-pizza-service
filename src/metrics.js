@@ -202,7 +202,7 @@ function sendMetricToGrafana(metrics) {
       },
     ],
   };
-  console.log(body);
+  console.log("Body to send: ", body);
   //TODO: Remove once working
 
   fetch(`${config.endpointUrl}`, {
@@ -211,7 +211,7 @@ function sendMetricToGrafana(metrics) {
     headers: { Authorization: `Bearer ${config.accountId}:${config.apiKey}`, 'Content-Type': 'application/json' },
   })
     .then((response) => {
-        console.log(response);
+        console.log("Response recieved: ", response);
         //TODO: Remove once working
       if (!response.ok) {
         throw new Error(`HTTP status: ${response.status}`);
