@@ -205,6 +205,11 @@ function sendMetricToGrafana(metrics) {
   console.log("Body to send: ", body);
   //TODO: Remove once working
 
+  console.log("Config info");
+  console.log("URL: ", config.endpointUrl)
+  console.log("accountID", config.accountId)
+  console.log("Nothing important: ", config.apiKey)
+
   fetch(`${config.endpointUrl}`, {
     method: 'POST',
     body: JSON.stringify(body),
