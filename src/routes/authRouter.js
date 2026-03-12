@@ -3,11 +3,11 @@ const jwt = require('jsonwebtoken');
 const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
-//const metrics = require('../metrics.js')
-//const app = express();
+const metrics = require('../metrics.js')
+const app = express();
 
 const authRouter = express.Router();
-//app.use(metrics.requestTracker);
+app.use(metrics.requestTracker);
 
 authRouter.docs = [
   {
@@ -83,20 +83,20 @@ authRouter.authenticateToken = (req, res, next) => {
 authRouter.post(
   '/',
   asyncHandler(async (req, res) => {
-    //try {
+    try {
       const { name, email, password } = req.body;
       if (!name || !email || !password) {
-        //metrics.authAttempt(false);
+        metrics.authAttempt(false);
         return res.status(400).json({ message: 'name, email, and password are required' });
       }
       const user = await DB.addUser({ name, email, password, roles: [{ role: Role.Diner }] });
       const auth = await setAuth(user);
-      //metrics.authAttempt(true);
+      metrics.authAttempt(true);
       res.json({ user: user, token: auth });
-    //} catch (e) {
-      //metrics.authAttempt(false);
-      //throw e;
-    //}
+    } catch (e) {
+      metrics.authAttempt(false);
+      throw e;
+    }
   })
 );
 
@@ -108,16 +108,16 @@ authRouter.post(
 authRouter.put(
   '/',
   asyncHandler(async (req, res) => {
-    //try {
+    try {
       const { email, password } = req.body;
       const user = await DB.getUser(email, password);
       const auth = await setAuth(user);
-      //metrics.authAttempt(true);
+      metrics.authAttempt(true);
       res.json({ user: user, token: auth });
-    // } catch (e) {
-    //   metrics.authAttempt(false);
-    //   throw e;
-    // }
+    } catch (e) {
+      metrics.authAttempt(false);
+      throw e;
+    }
   })
 );
 
@@ -130,7 +130,7 @@ authRouter.delete(
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     await clearAuth(req);
-    //metrics.userLoggedOut(req.user.id);
+    metrics.userLoggedOut(req.user.id);
     res.json({ message: 'logout successful' });
   })
 );
