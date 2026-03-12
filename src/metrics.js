@@ -159,7 +159,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 function createMetric(metricName, metricValue, metricUnit, metricType, valueType, attributes) {
-  attributes = { ...attributes, source: config.source };
+  attributes = { ...attributes, source: config.metrics.source };
 
   const metric = {
     name: metricName,
@@ -206,14 +206,14 @@ function sendMetricToGrafana(metrics) {
   //TODO: Remove once working
 
   console.log("Config info");
-  console.log("URL: ", config.endpointUrl)
-  console.log("accountID", config.accountId)
-  console.log("Nothing important: ", config.apiKey)
+  console.log("URL: ", config.metrics.endpointUrl)
+  console.log("accountID", config.metrics.accountId)
+  console.log("Nothing important: ", config.metrics.apiKey)
 
-  fetch(`${config.endpointUrl}`, {
+  fetch(`${config.metrics.endpointUrl}`, {
     method: 'POST',
     body: JSON.stringify(body),
-    headers: { Authorization: `Bearer ${config.accountId}:${config.apiKey}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${config.metrics.accountId}:${config.metrics.apiKey}`, 'Content-Type': 'application/json' },
   })
     .then((response) => {
         console.log("Response recieved: ", response);
