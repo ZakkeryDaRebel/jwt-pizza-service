@@ -1,6 +1,8 @@
 const config = require('./config');
 const os = require('os');
 
+console.log(config)
+
 //
 //HTTP Metrics
 //
