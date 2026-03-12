@@ -43,6 +43,10 @@ authRouter.docs = [
  */
 async function setAuthUser(req, res, next) {
   const token = readAuthToken(req);
+  console.log(token);
+  if (token) {
+  console.log("logged in?", await DB.isLoggedIn(token));
+}
   if (token) {
     try {
       if (await DB.isLoggedIn(token)) {
