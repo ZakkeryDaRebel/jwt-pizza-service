@@ -7,11 +7,15 @@ const os = require('os');
 //HTTP Metrics
 //
 const requests = {};
+let totalLatency = 0;
+let latencyCount = 0;
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
     // console.log(req);
     // console.log(res);
+    const startTime = Date.now();
+
   const method = req.method;
   requests[method] = (requests[method] || 0) + 1;
 
@@ -20,6 +24,12 @@ function requestTracker(req, res, next) {
   if (req.user && (req.user.id || req.user.userId)) {
     recordUserActivity(req.user.id || req.user.userId);
   }
+
+  res.on('finish', () => {
+    const latency = Date.now() - startTime;
+    totalLatency += latency;
+    latencyCount++;
+  });
 
   next();
 }
@@ -135,6 +145,7 @@ if (process.env.NODE_ENV !== 'test') {
     Object.keys(requests).forEach((method) => {
         metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
     });
+    metrics.push(createMetric('requestLatency', totalLatency / (latencyCount || 1), 'ms', 'gauge', 'asDouble', {}));
 
     //Pizza Metrics
     metrics.push(createMetric('pizzaSold', pizzasSold, '1', 'sum', 'asInt', {}));
