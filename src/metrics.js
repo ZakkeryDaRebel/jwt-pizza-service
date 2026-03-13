@@ -25,13 +25,11 @@ function requestTracker(req, res, next) {
     recordUserActivity(req.user.id || req.user.userId);
   }
 
-  res.on('finish', () => {
-    const latency = Date.now() - startTime;
-    totalLatency += latency;
-    latencyCount++;
-  });
-
   next();
+
+  const latency = Date.now() - startTime;
+  totalLatency += latency;
+  latencyCount++;
 }
 
 //
