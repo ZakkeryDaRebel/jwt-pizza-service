@@ -105,7 +105,7 @@ orderRouter.post(
     const j = await r.json();
     if (r.ok) {
       let price = 0
-      order.items((item) => {
+      order.items.forEach((item) => {
         price += item.price;
       })
       metrics.pizzaPurchase(true, Date.now() - latency, order.items.length, price)
