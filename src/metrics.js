@@ -55,6 +55,24 @@ function pizzaPurchase(success, latency, amount, price) {
   }
 }
 
+function getPizzaLatency() {
+    let latencyAverage = getLatencyAverage(orderLatency, orderCount);
+    orderLatency = 0;
+    orderCount = 0;
+    return latencyAverage;
+}
+
+function getRequestLatency() {
+    let latencyAverage = getLatencyAverage(totalLatency, latencyCount);
+    totalLatency = 0;
+    latencyCount = 0;
+    return latencyAverage;
+}
+
+function getLatencyAverage(latency, count) {
+    return latency / (count || 1);
+}
+
 //
 //Auth metrics
 //
@@ -143,14 +161,14 @@ if (process.env.NODE_ENV !== 'test') {
     Object.keys(requests).forEach((method) => {
         metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
     });
-    metrics.push(createMetric('requestLatency', totalLatency / (latencyCount || 1), 'ms', 'gauge', 'asDouble', {}));
+    metrics.push(createMetric('requestLatency', getRequestLatency(), 'ms', 'gauge', 'asDouble', {}));
 
     //Pizza Metrics
     metrics.push(createMetric('pizzaSold', pizzasSold, '1', 'sum', 'asInt', {}));
     metrics.push(createMetric('pizzaRevenue', revenue, 'usd', 'sum', 'asDouble', {}));
     metrics.push(createMetric('pizzaOrdersSuccess', successfulOrders, '1', 'sum', 'asInt', {}));
     metrics.push(createMetric('pizzaOrdersFailed', failedOrders, '1', 'sum', 'asInt', {}));
-    metrics.push(createMetric('pizzaOrderLatency', orderLatency / (orderCount || 1), 'ms', 'gauge', 'asDouble', {}));
+    metrics.push(createMetric('pizzaOrderLatency', getPizzaLatency(), 'ms', 'gauge', 'asDouble', {}));
 
     //Auth Metrics
     metrics.push(createMetric('authSuccess', authSuccess, '1', 'sum', 'asInt', {}));
