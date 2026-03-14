@@ -60,7 +60,7 @@ while true; do
   token=$(login "d@jwt.com" "diner")
   echo "Login diner..." $( [ -z "$token" ] && echo "false" || echo "true" ) #Should be true and get true
   result=$(execute_curl "-X POST $host/api/order -H 'Content-Type: application/json' -d '{\"franchiseId\": 1, \"storeId\":1, \"items\":[{ \"menuId\": 1, \"description\": \"Veggie\", \"price\": 0.05 }]}'  -H \"Authorization: Bearer $token\"")
-  echo "Bought a pizza..." $result #Should be 200, but I get 500
+  echo "Bought a pizza..." $result #Should be 200, but I get 200
   sleep 20
   result=$(execute_curl "-X DELETE $host/api/auth -H \"Authorization: Bearer $token\"")
   echo "Logging out diner..." $result #Should be 200 and get 200
@@ -82,7 +82,7 @@ while true; do
   echo "Bought too many pizzas..." $result  #Should get 500 and get 500
   sleep 5
   result=$(execute_curl "-X DELETE $host/api/auth -H \"Authorization: Bearer $token\"")
-  echo "Logging out hungry diner..." $result #Should get 200 and get 401
+  echo "Logging out hungry diner..." $result #Should get 200 and get 200
   sleep 295
 done &
 pid5=$!
