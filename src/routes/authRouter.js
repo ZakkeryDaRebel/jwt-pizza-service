@@ -41,10 +41,6 @@ authRouter.docs = [
  */
 async function setAuthUser(req, res, next) {
   const token = readAuthToken(req);
-  //console.log(token);
-  if (token) {
-  //console.log("logged in?", await DB.isLoggedIn(token));
-}
   if (token) {
     try {
       if (await DB.isLoggedIn(token)) {
@@ -82,8 +78,6 @@ authRouter.post(
   '/',
   asyncHandler(async (req, res) => {
     try {
-      // console.log("Register a new user")
-      // console.log(req)
       const { name, email, password } = req.body;
       if (!name || !email || !password) {
         metrics.authAttempt(false);
@@ -94,7 +88,6 @@ authRouter.post(
       metrics.authAttempt(true);
       res.json({ user: user, token: auth });
     } catch (e) {
-      // console.log("Error registering", e);
       metrics.authAttempt(false);
       throw e;
     }
