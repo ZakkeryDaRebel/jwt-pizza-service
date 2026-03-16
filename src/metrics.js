@@ -10,7 +10,7 @@ let latencyCount = 0;
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
-    const startTime = Date.now();
+  const startTime = Date.now();
 
   const method = req.method;
   requests[method] = (requests[method] || 0) + 1;
@@ -21,11 +21,15 @@ function requestTracker(req, res, next) {
     recordUserActivity(req.user.id || req.user.userId);
   }
 
-  next();
+  if (res && typeof res.on === 'function') {
+    res.on('finish', () => {
+      const latency = Date.now() - startTime;
+      totalLatency += latency;
+      latencyCount++;
+    });
+  }
 
-  const latency = Date.now() - startTime;
-  totalLatency += latency;
-  latencyCount++;
+  next();
 }
 
 //
