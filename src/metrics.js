@@ -21,8 +21,8 @@ function requestTracker(req, res, next) {
 
   //If the user has an id, and has sent a backend request,
   //  then it is considered an active user
-  if (req.user && (req.user.id || req.user.userId)) {
-    recordUserActivity(req.user.id || req.user.userId);
+  if (req.user) {
+    recordUserActivity(req.user);
   }
 
   next();
@@ -111,18 +111,18 @@ const activityQueue = [];
 const minutesInMS = 60 * 1000;
 const activeTime = 15 * minutesInMS; 
 
-function recordUserActivity(userId) {
-    if (!userId) return;
+function recordUserActivity(user) {
+    if (!user) return;
 
     const now = Date.now();
 
-    activeUsers.set(userId, now);
-    activityQueue.push({ userId, time: now });
+    activeUsers.set(user, now);
+    activityQueue.push({ user, time: now });
 }
 
-function userLoggedOut(userId) {
-    if (!userId) return;
-    activeUsers.delete(userId);
+function userLoggedOut(user) {
+    if (!user) return;
+    activeUsers.delete(user);
 }
 
 function cleanupInactiveUsers() {
