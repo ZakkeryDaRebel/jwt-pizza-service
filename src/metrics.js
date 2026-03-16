@@ -1,8 +1,6 @@
 const config = require('./config');
 const os = require('os');
 
-//console.log(config)
-
 //
 //HTTP Metrics
 //
@@ -12,8 +10,6 @@ let latencyCount = 0;
 
 // Middleware to track requests
 function requestTracker(req, res, next) {
-    // console.log(req);
-    // console.log(res);
     const startTime = Date.now();
 
   const method = req.method;
@@ -231,13 +227,6 @@ function sendMetricToGrafana(metrics) {
       },
     ],
   };
-//   console.log("Body to send: ", body);
-  //TODO: Remove once working
-
-//   console.log("Config info");
-//   console.log("URL: ", config.metrics.endpointUrl)
-//   console.log("accountID", config.metrics.accountId)
-//   console.log("Nothing important: ", config.metrics.apiKey)
 
   fetch(`${config.metrics.endpointUrl}`, {
     method: 'POST',
@@ -245,8 +234,6 @@ function sendMetricToGrafana(metrics) {
     headers: { Authorization: `Bearer ${config.metrics.accountId}:${config.metrics.apiKey}`, 'Content-Type': 'application/json' },
   })
     .then((response) => {
-        // console.log("Response recieved: ", response);
-        //TODO: Remove once working
       if (!response.ok) {
         throw new Error(`HTTP status: ${response.status}`);
       }
