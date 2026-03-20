@@ -9,8 +9,8 @@ class Logger {
         path: req.originalUrl,
         method: req.method,
         statusCode: res.statusCode,
-        reqBody: JSON.stringify(req.body),
-        resBody: JSON.stringify(resBody),
+        reqBody: req.body,
+        resBody: resBody,
       };
       const level = this.statusToLogLevel(res.statusCode);
       this.log(level, 'http', logData);
@@ -19,6 +19,54 @@ class Logger {
     };
     next();
   };
+
+  async logQuery(query, params, fn) {
+    try {
+        const result = await fn();
+
+        this.logger.log('info', 'db', {
+        query,
+        params,
+        resultCount: Array.isArray(result) ? result.length : 1,
+        });
+
+        return result;
+    } catch (err) {
+        this.logger.log('error', 'db', {
+        query,
+        params,
+        error: err.message,
+        });
+        throw err;
+    }
+  }
+
+  async  fetchWithLogging(url, options) {
+  const start = Date.now();
+
+  try {
+        const response = await fetch(url, options);
+        const body = await response.clone().json();
+
+        this.logger.log('info', 'factory', {
+        url,
+        method: options.method,
+        reqBody: options.body ? JSON.parse(options.body) : null,
+        status: response.status,
+        resBody: body,
+        latency: Date.now() - start,
+        });
+
+        return response;
+    } catch (err) {
+        this.logger.log('error', 'factory', {
+        url,
+        method: options.method,
+        error: err.message,
+        });
+        throw err;
+    }
+  }
 
   log(level, type, logData) {
     const labels = { component: config.logging.source, level: level, type: type };
@@ -39,9 +87,14 @@ class Logger {
   }
 
   sanitize(logData) {
-    logData = JSON.stringify(logData);
-    return logData.replace(/\\"password\\":\s*\\"[^"]*\\"/g, '\\"password\\": \\"*****\\"');
-  }
+  let str = JSON.stringify(logData);
+
+  return str
+    .replace(/"password":"[^"]*"/gi, '"password":"*****"')
+    .replace(/"token":"[^"]*"/gi, '"token":"*****"')
+    .replace(/"authorization":"[^"]*"/gi, '"authorization":"*****"')
+    .replace(/Bearer\s+[A-Za-z0-9.\-_]+/gi, 'Bearer *****');
+}
 
   sendLogToGrafana(event) {
     const body = JSON.stringify(event);
@@ -58,3 +111,4 @@ class Logger {
   }
 }
 module.exports = new Logger();
+module.exports = {}
