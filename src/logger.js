@@ -24,7 +24,7 @@ class Logger {
     try {
         const result = await fn();
 
-        this.logger.log('info', 'db', {
+        this.log('info', 'db', {
         query,
         params,
         resultCount: Array.isArray(result) ? result.length : 1,
@@ -32,7 +32,7 @@ class Logger {
 
         return result;
     } catch (err) {
-        this.logger.log('error', 'db', {
+        this.log('error', 'db', {
         query,
         params,
         error: err.message,
@@ -48,7 +48,7 @@ class Logger {
         const response = await fetch(url, options);
         const body = await response.clone().json();
 
-        this.logger.log('info', 'factory', {
+        this.log('info', 'factory', {
         url,
         method: options.method,
         reqBody: options.body ? JSON.parse(options.body) : null,
@@ -59,7 +59,7 @@ class Logger {
 
         return response;
     } catch (err) {
-        this.logger.log('error', 'factory', {
+        this.log('error', 'factory', {
         url,
         method: options.method,
         error: err.message,
@@ -111,4 +111,3 @@ class Logger {
   }
 }
 module.exports = new Logger();
-module.exports = {}
