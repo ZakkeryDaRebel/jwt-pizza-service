@@ -86,42 +86,49 @@ class Logger {
     return (Math.floor(Date.now()) * 1000000).toString();
   }
 
-  sanitize(data) {
-  const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'jwt', 'apiKey', 'id'];
+  sanitize(logData) {
+  const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'jwt', 'apiKey', 'id', 'dinerId'];
 
-  function sanitizeValue(value) {
-    if (typeof value === 'string') {
-      // Try to parse nested JSON strings (like your resBody)
+  function deepSanitize(obj) {
+    if (obj === null || obj === undefined) return obj;
+
+    // Handle strings (including embedded JSON)
+    if (typeof obj === 'string') {
       try {
-        const parsed = JSON.parse(value);
-        return sanitizeValue(parsed);
+        const parsed = JSON.parse(obj);
+        return JSON.stringify(deepSanitize(parsed));
       } catch {
-        // Mask bearer tokens in plain strings
-        return value.replace(/Bearer\s+[A-Za-z0-9.\-_]+/gi, 'Bearer *****');
+        // fallback regex cleanup for raw strings
+        return obj
+          .replace(/Bearer\s+[A-Za-z0-9.\-_]+/gi, 'Bearer *****')
+          .replace(/"password":"[^"]*"/gi, '"password":"*****"')
+          .replace(/"token":"[^"]*"/gi, '"token":"*****"')
+          .replace(/"authorization":"[^"]*"/gi, '"authorization":"*****"');
       }
     }
 
-    if (Array.isArray(value)) {
-      return value.map(sanitizeValue);
+    // Handle arrays
+    if (Array.isArray(obj)) {
+      return obj.map(deepSanitize);
     }
 
-    if (value && typeof value === 'object') {
-      const newObj = {};
-      for (const key in value) {
-        if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
-          newObj[key] = '*****';
+    // Handle objects
+    if (typeof obj === 'object') {
+      const sanitized = {};
+      for (const key in obj) {
+        if (SENSITIVE_KEYS.includes(key)) {
+          sanitized[key] = '*****';
         } else {
-          newObj[key] = sanitizeValue(value[key]);
+          sanitized[key] = deepSanitize(obj[key]);
         }
       }
-      return newObj;
+      return sanitized;
     }
 
-    return value;
+    return obj;
   }
 
-  const sanitized = sanitizeValue(data);
-  return JSON.stringify(sanitized);
+  return JSON.stringify(deepSanitize(logData));
 }
 
   sendLogToGrafana(event) {
