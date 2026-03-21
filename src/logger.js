@@ -41,7 +41,7 @@ class Logger {
     }
   }
 
-  async  fetchWithLogging(url, options) {
+  async fetchWithLogging(url, options) {
   const start = Date.now();
 
   try {
@@ -86,14 +86,42 @@ class Logger {
     return (Math.floor(Date.now()) * 1000000).toString();
   }
 
-  sanitize(logData) {
-  let str = JSON.stringify(logData);
+  sanitize(data) {
+  const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'jwt', 'apiKey', 'id'];
 
-  return str
-    .replace(/"password":"[^"]*"/gi, '"password":"*****"')
-    .replace(/"token":"[^"]*"/gi, '"token":"*****"')
-    .replace(/"authorization":"[^"]*"/gi, '"authorization":"*****"')
-    .replace(/Bearer\s+[A-Za-z0-9.\-_]+/gi, 'Bearer *****');
+  function sanitizeValue(value) {
+    if (typeof value === 'string') {
+      // Try to parse nested JSON strings (like your resBody)
+      try {
+        const parsed = JSON.parse(value);
+        return sanitizeValue(parsed);
+      } catch {
+        // Mask bearer tokens in plain strings
+        return value.replace(/Bearer\s+[A-Za-z0-9.\-_]+/gi, 'Bearer *****');
+      }
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(sanitizeValue);
+    }
+
+    if (value && typeof value === 'object') {
+      const newObj = {};
+      for (const key in value) {
+        if (SENSITIVE_KEYS.includes(key.toLowerCase())) {
+          newObj[key] = '*****';
+        } else {
+          newObj[key] = sanitizeValue(value[key]);
+        }
+      }
+      return newObj;
+    }
+
+    return value;
+  }
+
+  const sanitized = sanitizeValue(data);
+  return JSON.stringify(sanitized);
 }
 
   sendLogToGrafana(event) {
