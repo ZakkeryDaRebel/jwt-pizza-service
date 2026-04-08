@@ -63,7 +63,9 @@ async function setAuthUser(req, res, next) {
  * @param {*} next function to call next
  */
 authRouter.authenticateToken = (req, res, next) => {
-  if (!req.user) {
+  const token = readAuthToken(req);
+  req.user = jwt.verify(token, config.jwtSecret);
+  if (!req.user || !DB.isLoggedIn(token)) {
     return res.status(401).send({ message: 'unauthorized' });
   }
   next();
