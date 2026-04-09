@@ -371,3 +371,252 @@ describe('bootstrap/admin initialization security', () => {
     expect(source).toContain("throw new Error('Missing bootstrap admin credentials');");
   });
 });
+
+// ==========================
+// NEW SECURITY TESTS
+// ==========================
+
+describe('additional authentication hardening', () => {
+  const app = require('./service.js');
+
+  test('SEC-AUTH-6 empty password login is rejected and no token issued', async () => {
+    const { user } = await registerUser(app);
+
+    const res = await loginUser(app, user.email, '');
+
+    // must not succeed
+    expect(res.status).not.toBe(200);
+    expect(res.body.token).toBeFalsy();
+
+    // attempt to use whatever token came back (if any)
+    const token = res.body.token || 'invalid-token';
+    const protectedRes = await request(app)
+      .get('/api/user/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(protectedRes.status).toBe(401);
+    expect(protectedRes.body.message).toBe('unauthorized');
+  });
+});
+
+
+// ==========================
+// BASE ORDER FIXTURE
+// ==========================
+const BASE_ORDER_PAYLOAD = {
+  franchiseId: 1,
+  storeId: '1',
+  items: [
+    {
+      menuId: 2,
+      description: 'Pepperoni',
+      price: 0.0042,
+    },
+  ],
+};
+
+function cloneOrderPayload() {
+  return JSON.parse(JSON.stringify(BASE_ORDER_PAYLOAD));
+}
+
+async function createAuthenticatedUser(app) {
+  const { res } = await registerUser(app);
+  return res.body.token;
+}
+
+
+// ==========================
+// VALUE TAMPERING TESTS
+// ==========================
+describe('order security - value tampering', () => {
+  const app = require('./service.js');
+
+  test('SEC-ORDER-VAL-1 rejects negative price', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items[0].price = -1000.42; // single mutation
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+    expect(res.body.order).toBeFalsy();
+    expect(res.body.token).toBeFalsy();
+  });
+
+  test('SEC-ORDER-VAL-2 rejects zero price', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items[0].price = 0;
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+    expect(res.body.order).toBeFalsy();
+  });
+
+  test('SEC-ORDER-VAL-3 rejects extreme large price', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items[0].price = 999999999;
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+    expect(res.body.order).toBeFalsy();
+  });
+
+  test('SEC-ORDER-VAL-4 rejects tampered price precision/value', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items[0].price = 0.9999;
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+    expect(res.body.order).toBeFalsy();
+  });
+});
+
+
+// ==========================
+// REFERENCE TAMPERING TESTS
+// ==========================
+describe('order security - reference tampering', () => {
+  const app = require('./service.js');
+
+  test('SEC-ORDER-REF-1 rejects invalid menuId', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items[0].menuId = 9999;
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+
+  test('SEC-ORDER-REF-2 rejects mismatched description', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items[0].description = 'Hacked Pizza';
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+
+  test('SEC-ORDER-REF-3 rejects invalid storeId type/value', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.storeId = 'invalid-store';
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+
+  test('SEC-ORDER-REF-4 rejects invalid franchiseId', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.franchiseId = 9999;
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+});
+
+
+// ==========================
+// STRUCTURAL / TYPE TESTS
+// ==========================
+describe('order security - structural/type tampering', () => {
+  const app = require('./service.js');
+
+  test('SEC-ORDER-STRUCT-1 rejects empty items array', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items = [];
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+
+  test('SEC-ORDER-STRUCT-2 rejects items not array', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items = 'not-an-array';
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+
+  test('SEC-ORDER-STRUCT-3 rejects menuId wrong type', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.items[0].menuId = 'two';
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+
+  test('SEC-ORDER-STRUCT-4 rejects malformed storeId', async () => {
+    const token = await createAuthenticatedUser(app);
+    const payload = cloneOrderPayload();
+
+    payload.storeId = {};
+
+    const res = await request(app)
+      .post('/api/order')
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(res.status).not.toBe(200);
+  });
+});
