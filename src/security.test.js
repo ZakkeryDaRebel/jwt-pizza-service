@@ -34,7 +34,7 @@ function loadFreshApp(extraEnv = {}) {
     }
   }
   const app = require('./service.js');
-  for (const [k, v] of Object.entries(extraEnv)) {
+  for (const [k] of Object.entries(extraEnv)) {
     if (previous[k] === undefined) {
       delete process.env[k];
     } else {
