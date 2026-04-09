@@ -22,36 +22,12 @@ async function loginUser(app, email, password) {
   return request(app).put('/api/auth').send({ email, password });
 }
 
-// function loadFreshApp(extraEnv = {}) {
-//   jest.resetModules();
-//   const previous = {};
-//   for (const [k, v] of Object.entries(extraEnv)) {
-//     previous[k] = process.env[k];
-//     if (v === null) {
-//       delete process.env[k];
-//     } else {
-//       process.env[k] = v;
-//     }
-//   }
-//   const app = require('./service.js');
-//   for (const [k] of Object.entries(extraEnv)) {
-//     if (previous[k] === undefined) {
-//       delete process.env[k];
-//     } else {
-//       process.env[k] = previous[k];
-//     }
-//   }
-//   return app;
-// }
-
 describe('security matrix', () => {
   test('security test matrix maps each risk to a test id', () => {
     const matrix = {
       auth: ['SEC-AUTH-1', 'SEC-AUTH-2', 'SEC-AUTH-3', 'SEC-AUTH-4', 'SEC-AUTH-5'],
       sqliAndValidation: ['SEC-INJ-1', 'SEC-INJ-2', 'SEC-INJ-3', 'SEC-INJ-4'],
-      //errorDisclosure: ['SEC-ERR-1', 'SEC-ERR-2'],
       loggingRedaction: ['SEC-LOG-1', 'SEC-LOG-2', 'SEC-LOG-3'],
-      //corsAndRateLimit: ['SEC-CORS-1', 'SEC-CORS-2', 'SEC-RATE-1', 'SEC-RATE-2'],
       bootstrap: ['SEC-BOOT-1'],
     };
 
@@ -198,50 +174,6 @@ describe('injection and input validation security', () => {
   });
 });
 
-// describe('error handling and information disclosure', () => {
-//   test('SEC-ERR-1 production responses do not leak stack and include requestId', async () => {
-//     const previousEnv = process.env.NODE_ENV;
-//     process.env.NODE_ENV = 'production';
-//     try {
-//       const app = loadFreshApp({ NODE_ENV: 'production' });
-//       const { res: registerRes } = await registerUser(app);
-//       const token = registerRes.body.token;
-//       const badOrder = { franchiseId: 1, storeId: 1, items: [{ menuId: -999, description: 'x', price: 1 }] };
-
-//       const res = await request(app)
-//         .post('/api/order')
-//         .set('Authorization', `Bearer ${token}`)
-//         .set('x-request-id', 'req-prod-1')
-//         .send(badOrder);
-
-//       expect(res.status).toBe(500);
-//       expect(res.body.message).toBeTruthy();
-//       expect(res.body.requestId).toBe('req-prod-1');
-//       expect(res.body.details).toBeUndefined();
-//       expect(JSON.stringify(res.body)).not.toMatch(/\/src\/|node_modules|Error:|\\n\s+at\s/);
-//     } finally {
-//       process.env.NODE_ENV = previousEnv;
-//     }
-//   });
-
-//   test('SEC-ERR-2 non-production responses include controlled debug details and requestId', async () => {
-//     const app = loadFreshApp({ NODE_ENV: 'development' });
-//     const { res: registerRes } = await registerUser(app);
-//     const token = registerRes.body.token;
-//     const badOrder = { franchiseId: 1, storeId: 1, items: [{ menuId: -999, description: 'x', price: 1 }] };
-
-//     const res = await request(app)
-//       .post('/api/order')
-//       .set('Authorization', `Bearer ${token}`)
-//       .set('x-request-id', 'req-dev-1')
-//       .send(badOrder);
-
-//     expect(res.status).toBe(500);
-//     expect(res.body.requestId).toBe('req-dev-1');
-//     expect(typeof res.body.details).toBe('string');
-//   });
-// });
-
 describe('logging redaction and sensitive data handling', () => {
   test('SEC-LOG-1 logger sanitize redacts sensitive keys including nested and alternate casing', () => {
     const raw = {
@@ -311,66 +243,6 @@ describe('logging redaction and sensitive data handling', () => {
     spy.mockRestore();
   });
 });
-
-// describe('rate limiting and CORS security', () => {
-//   test('SEC-RATE-1 auth endpoint throttles repeated attempts with 429', async () => {
-//     const app = require('./service.js');
-//     const email = randomEmail();
-//     let saw429 = false;
-
-//     for (let i = 0; i < 12; i += 1) {
-//       const res = await request(app).put('/api/auth').send({ email, password: 'wrong' });
-//       if (res.status === 429) {
-//         saw429 = true;
-//         expect(res.body.message).toBe('too many authentication attempts');
-//         break;
-//       }
-//     }
-//     expect(saw429).toBe(true);
-//   });
-
-//   test('SEC-RATE-2 global request throttling returns 429 under abuse volume', async () => {
-//     const app = require('./service.js');
-//     let status = 200;
-//     for (let i = 0; i < 220; i += 1) {
-//       const res = await request(app).get('/');
-//       status = res.status;
-//       if (status === 429) {
-//         expect(res.body.message).toBe('too many requests');
-//         break;
-//       }
-//     }
-//     expect(status).toBe(429);
-//   });
-
-//   test('SEC-CORS-1 with allowlist, trusted origin gets credentials header and untrusted does not', async () => {
-//     const app = loadFreshApp({ CORS_ALLOWLIST: 'https://trusted.example' });
-//     const trusted = await request(app).get('/').set('Origin', 'https://trusted.example');
-//     expect(trusted.headers['access-control-allow-origin']).toBe('https://trusted.example');
-//     expect(trusted.headers['access-control-allow-credentials']).toBe('true');
-
-//     const untrusted = await request(app).get('/').set('Origin', 'https://evil.example');
-//     expect(untrusted.headers['access-control-allow-origin']).toBeUndefined();
-//     expect(untrusted.headers['access-control-allow-credentials']).toBeUndefined();
-//   });
-
-//   test('SEC-CORS-2 without allowlist, wildcard origin is allowed without credential header', async () => {
-//     const app = loadFreshApp({ CORS_ALLOWLIST: null });
-//     const res = await request(app).get('/').set('Origin', 'https://anywhere.example');
-//     expect(res.headers['access-control-allow-origin']).toBe('https://anywhere.example');
-//     expect(res.headers['access-control-allow-credentials']).toBeUndefined();
-//   });
-// });
-
-// describe('bootstrap/admin initialization security', () => {
-//   test('SEC-BOOT-1 production bootstrap without required credentials fails safely', async () => {
-//     const fs = require('node:fs');
-//     const source = fs.readFileSync(require.resolve('./database/database.js'), 'utf8');
-//     expect(source).toContain("const isProd = process.env.NODE_ENV === 'production';");
-//     expect(source).toContain('if (!useDefaults && (!bootstrapName || !bootstrapEmail || !bootstrapPassword)) {');
-//     expect(source).toContain("throw new Error('Missing bootstrap admin credentials');");
-//   });
-// });
 
 // ==========================
 // NEW SECURITY TESTS
