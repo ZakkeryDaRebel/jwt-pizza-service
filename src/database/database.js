@@ -276,7 +276,7 @@ class DB {
           throw new StatusCodeError(`Invalid menuId: ${item.menuId}`, 400);
         }
         const menu = menuRows[0];
-        if (menu.description !== item.description || Number(menu.price) !== Number(item.price)) {
+        if (menu.title !== item.description || Number(menu.price) !== Number(item.price)) {
           throw new StatusCodeError(`Menu item data mismatch for menuId ${item.menuId}`, 400);
         }
       }
