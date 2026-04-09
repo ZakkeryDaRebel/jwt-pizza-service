@@ -268,7 +268,7 @@ class DB {
         // Validate menuId exists
         let menuRows;
         try {
-          menuRows = await this.query(connection, `SELECT id, description, price FROM menu WHERE id=?`, [item.menuId]);
+          menuRows = await this.query(connection, `SELECT id, title, price FROM menu WHERE id=?`, [item.menuId]);
         } catch {
           throw new StatusCodeError('Database error during menu validation', 500);
         }
