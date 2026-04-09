@@ -99,8 +99,8 @@ orderRouter.post(
     const orderReq = req.body;
     try {
       await DB.validateOrder(req.user, orderReq);
-    } catch {
-      throw new StatusCodeError('Failed to fulfill order at factory', 500);
+    } catch(error) {
+      throw new StatusCodeError('Invalid order:' + error.message , 500);
     }
     const order = await DB.addDinerOrder(req.user, orderReq);
     const r = await logger.fetchWithLogging(`${config.factory.url}/api/order`, {
