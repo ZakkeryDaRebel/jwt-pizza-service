@@ -92,7 +92,7 @@ class Logger {
   }
 
   sanitize(logData) {
-  const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'jwt', 'apikey', 'secret', 'cookie', 'set-cookie', 'id', 'dinerid'];
+  const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'jwt', 'apikey', 'secret', 'cookie', 'set-cookie', 'setcookie','id', 'dinerid'];
 
   function deepSanitize(obj) {
     if (obj === null || obj === undefined) return obj;
