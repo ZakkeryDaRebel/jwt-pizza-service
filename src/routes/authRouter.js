@@ -48,8 +48,11 @@ async function setAuthUser(req, res, next) {
     try {
       if (await DB.isLoggedIn(token)) {
         // Check the database to make sure the token is valid.
-        req.user = jwt.verify(token, config.jwtSecret);
-        req.user.isRole = (role) => !!req.user.roles.find((r) => r.role === role);
+        req.user = jwt.verify(token, config.jwtSecret, {
+          issuer: 'jwt-pizza-service',
+          audience: 'jwt-pizza-client',
+        });
+        req.user.isRole = (role) => !!req.user.roles?.find((r) => r.role === role);
       }
     } catch {
       req.user = null;

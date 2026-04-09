@@ -9,6 +9,11 @@ if [ -z "$1" ]; then
   exit 1
 fi
 host=$1
+if ! [[ "$host" =~ ^https?://[a-zA-Z0-9._:-]+$ ]]; then
+  echo "Invalid host format: $host"
+  exit 1
+fi
+host="${host%/}"
 
 response=$(curl -s -X PUT "${host}/api/auth" -d '{"email":"a@jwt.com", "password":"admin"}' -H 'Content-Type: application/json')
 token=$(echo "${response}" | jq -r '.token')
