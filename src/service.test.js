@@ -4,7 +4,7 @@ const { DB } = require('./database/database.js');
 
 // Test accounts
 let testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
-const adminUser = { name: '常用名字', email: 'a@jwt.com', password: 'admin' };
+const adminUser = { name: '常用名字', email: 'admin@jwt.com', password: 'admin-pizza' };
 
 let testUserAuthToken = null;
 let loginUserAuthToken = null;

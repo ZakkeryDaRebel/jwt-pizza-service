@@ -1,0 +1,4 @@
+# .cursorrules
+Always show proposed changes as diffs before applying.
+Never regenerate an entire file; only modify the specific lines relevant to the task.
+Preserve all existing comments, formatting, and imports that are not directly related to the requested change.

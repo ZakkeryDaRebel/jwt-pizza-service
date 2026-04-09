@@ -6,6 +6,9 @@ const { DB, Role } = require('../database/database.js');
 const metrics = require('../metrics.js')
 
 const authRouter = express.Router();
+const authAttempts = new Map();
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_MAX_ATTEMPTS = 10;
 
 authRouter.docs = [
   {
@@ -62,13 +65,25 @@ async function setAuthUser(req, res, next) {
  * @param {*} res response
  * @param {*} next function to call next
  */
-authRouter.authenticateToken = (req, res, next) => {
-  const token = readAuthToken(req);
-  req.user = jwt.verify(token, config.jwtSecret);
-  if (!req.user || !DB.isLoggedIn(token)) {
+authRouter.authenticateToken = async (req, res, next) => {
+  try {
+    const token = readAuthToken(req);
+    if (!token) {
+      return res.status(401).send({ message: 'unauthorized' });
+    }
+
+    req.user = jwt.verify(token, config.jwtSecret, {
+      issuer: 'jwt-pizza-service',
+      audience: 'jwt-pizza-client',
+    });
+    req.user.isRole = (role) => !!req.user.roles?.find((r) => r.role === role);
+    if (!req.user || !await DB.isLoggedIn(token)) {
+      return res.status(401).send({ message: 'unauthorized' });
+    }
+    next();
+  } catch {
     return res.status(401).send({ message: 'unauthorized' });
   }
-  next();
 };
 
 /**
@@ -78,6 +93,7 @@ authRouter.authenticateToken = (req, res, next) => {
  */
 authRouter.post(
   '/',
+  authRateLimit,
   asyncHandler(async (req, res) => {
     try {
       const { name, email, password } = req.body;
@@ -103,6 +119,7 @@ authRouter.post(
  */
 authRouter.put(
   '/',
+  authRateLimit,
   asyncHandler(async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -137,9 +154,40 @@ authRouter.delete(
  * @returns authToken
  */
 async function setAuth(user) {
-  const token = jwt.sign(user, config.jwtSecret);
+  const tokenPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    roles: user.roles,
+  };
+  const token = jwt.sign(tokenPayload, config.jwtSecret, {
+    expiresIn: '1h',
+    issuer: 'jwt-pizza-service',
+    audience: 'jwt-pizza-client',
+    jwtid: `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  });
   await DB.loginUser(user.id, token);
   return token;
+}
+
+function authRateLimit(req, res, next) {
+  const email = typeof req.body?.email === 'string' ? req.body.email.toLowerCase() : 'unknown';
+  const key = `${req.ip}:${email}`;
+  const now = Date.now();
+  const existing = authAttempts.get(key);
+
+  if (!existing || now > existing.resetAt) {
+    authAttempts.set(key, { count: 1, resetAt: now + AUTH_WINDOW_MS });
+    return next();
+  }
+
+  if (existing.count >= AUTH_MAX_ATTEMPTS) {
+    return res.status(429).json({ message: 'too many authentication attempts' });
+  }
+
+  existing.count += 1;
+  authAttempts.set(key, existing);
+  return next();
 }
 
 /**

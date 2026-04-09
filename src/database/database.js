@@ -60,18 +60,32 @@ class DB {
   async getUser(email, password) {
     const connection = await this.getConnection();
     try {
-      const userResult = await this.query(connection, `SELECT * FROM user WHERE email=?`, [email]);
-      const user = userResult[0];
-      if (!user || !password || !await bcrypt.compare(password, user.password)) {
+      const userResult = await this.query(connection, `SELECT * FROM user WHERE email=? ORDER BY id DESC`, [email]);
+      if (!userResult.length || !password) {
         throw new StatusCodeError('unknown user', 404);
       }
-
-      const roleResult = await this.query(connection, `SELECT * FROM userRole WHERE userId=?`, [user.id]);
-      const roles = roleResult.map((r) => {
-        return { objectId: r.objectId || undefined, role: r.role };
-      });
-
-      return { ...user, roles: roles, password: undefined };
+      let matchedUser = null;
+      let matchedRoles = [];
+      for (const candidate of userResult) {
+        if (!await bcrypt.compare(password, candidate.password)) {
+          continue;
+        }
+        const roleResult = await this.query(connection, `SELECT * FROM userRole WHERE userId=?`, [candidate.id]);
+        const roles = roleResult.map((r) => {
+          return { objectId: r.objectId || undefined, role: r.role };
+        });
+        if (!matchedUser || roles.length > matchedRoles.length) {
+          matchedUser = candidate;
+          matchedRoles = roles;
+        }
+        if (roles.length > 0) {
+          break;
+        }
+      }
+      if (!matchedUser) {
+        throw new StatusCodeError('unknown user', 404);
+      }
+      return { ...matchedUser, roles: matchedRoles, password: undefined };
     } finally {
       connection.end();
     }
@@ -88,15 +102,17 @@ class DB {
   async getUsers(authUser, page = 0, limit = 10, nameFilter = '*') {
     const connection = await this.getConnection();
 
-    const offset = page * limit;
+    const safeLimit = this.parsePaginationValue(limit, 10, 1, 100);
+    const safePage = this.parsePaginationValue(page, 0, 0, 10000);
+    const offset = safePage * safeLimit;
     nameFilter = nameFilter.replace(/\*/g, '%');
 
     try {
-      let users = await this.query(connection, `SELECT id, name, email FROM user WHERE name LIKE ? LIMIT ${limit + 1} OFFSET ${offset}`, [nameFilter]);
+      let users = await this.query(connection, `SELECT id, name, email FROM user WHERE name LIKE ? LIMIT ${safeLimit + 1} OFFSET ${offset}`, [nameFilter]);
 
-      const more = users.length > limit;
+      const more = users.length > safeLimit;
       if (more) {
-        users = users.slice(0, limit);
+        users = users.slice(0, safeLimit);
       }
 
       for (const user of users) {
@@ -111,20 +127,39 @@ class DB {
   async updateUser(userId, name, email, password) {
     const connection = await this.getConnection();
     try {
-      const params = [];
+      const safeUserId = Number.parseInt(userId, 10);
+      if (!Number.isInteger(safeUserId) || safeUserId <= 0) {
+        throw new StatusCodeError('invalid user id', 400);
+      }
+
+      const updates = [];
+      const values = [];
       if (password) {
+        if (typeof password !== 'string') {
+          throw new StatusCodeError('invalid password', 400);
+        }
         const hashedPassword = await bcrypt.hash(password, 10);
-        params.push(`password='${hashedPassword}'`);
+        updates.push('password=?');
+        values.push(hashedPassword);
       }
       if (email) {
-        params.push(`email='${email}'`);
+        if (typeof email !== 'string') {
+          throw new StatusCodeError('invalid email', 400);
+        }
+        updates.push('email=?');
+        values.push(email);
       }
       if (name) {
-        params.push(`name='${name}'`);
+        if (typeof name !== 'string') {
+          throw new StatusCodeError('invalid name', 400);
+        }
+        updates.push('name=?');
+        values.push(name);
       }
-      if (params.length > 0) {
-        const query = `UPDATE user SET ${params.join(', ')} WHERE id=${userId}`;
-        await this.query(connection, query);
+      if (updates.length > 0) {
+        values.push(safeUserId);
+        const query = `UPDATE user SET ${updates.join(', ')} WHERE id=?`;
+        await this.query(connection, query, values);
       }
       return this.getUser(email, password);
     } finally {
@@ -153,7 +188,7 @@ class DB {
     token = this.getTokenSignature(token);
     const connection = await this.getConnection();
     try {
-      await this.query(connection, `INSERT INTO auth (token, userId) VALUES (?, ?) ON DUPLICATE KEY UPDATE token=token`, [token, userId]);
+      await this.query(connection, `INSERT INTO auth (token, userId) VALUES (?, ?) ON DUPLICATE KEY UPDATE token=VALUES(token), userId=VALUES(userId)`, [token, userId]);
     } finally {
       connection.end();
     }
@@ -190,6 +225,67 @@ class DB {
         order.items = items;
       }
       return { dinerId: user.id, orders: orders, page };
+    } finally {
+      connection.end();
+    }
+  }
+
+  /*
+    user is a json object? Has number id, string name, string email, list of roles (which is a role connected to a string), and iat (issued at timestamp)
+    order is a json object? Has an array of items (which has a number menuId, string description, and number price), then string storeId, and number franchiseId
+  */
+  async validateOrder(user, order) {
+    const connection = await this.getConnection();
+    try {
+      // 1. Validate user exists and matches
+      if (!user || !user.id || !user.email) {
+        throw new StatusCodeError('Invalid user object', 400);
+      }
+      const userResult = await this.query(connection, `SELECT * FROM user WHERE id=?`, [user.id]);
+      if (!userResult || userResult.length === 0) {
+        throw new StatusCodeError('User does not exist', 404);
+      }
+      const dbUser = userResult[0];
+      if (dbUser.email !== user.email) {
+        throw new StatusCodeError('User mismatch', 403);
+      }
+
+      // 2. Validate franchiseId
+      try {
+        await this.getID(connection, 'id', order.franchiseId, 'franchise');
+      } catch {
+        throw new StatusCodeError('Invalid franchiseId', 400);
+      }
+
+      // 3. Validate storeId
+      try {
+        await this.getID(connection, 'id', order.storeId, 'store');
+      } catch {
+        throw new StatusCodeError('Invalid storeId', 400);
+      }
+
+      // 4. Validate order items
+      if (!Array.isArray(order.items) || order.items.length === 0) {
+        throw new StatusCodeError('Order must have at least one item', 400);
+      }
+      for (const item of order.items) {
+        // Validate menuId exists
+        let menuRows;
+        try {
+          menuRows = await this.query(connection, `SELECT id, description, price FROM menu WHERE id=?`, [item.menuId]);
+        } catch {
+          throw new StatusCodeError('Database error during menu validation', 500);
+        }
+        if (!menuRows || menuRows.length === 0) {
+          throw new StatusCodeError(`Invalid menuId: ${item.menuId}`, 400);
+        }
+        const menu = menuRows[0];
+        if (menu.description !== item.description || Number(menu.price) !== Number(item.price)) {
+          throw new StatusCodeError(`Menu item data mismatch for menuId ${item.menuId}`, 400);
+        }
+      }
+      // If all checks pass, return true
+      return true;
     } finally {
       connection.end();
     }
@@ -265,15 +361,17 @@ class DB {
   async getFranchises(authUser, page = 0, limit = 10, nameFilter = '*') {
     const connection = await this.getConnection();
 
-    const offset = page * limit;
+    const safeLimit = this.parsePaginationValue(limit, 10, 1, 100);
+    const safePage = this.parsePaginationValue(page, 0, 0, 10000);
+    const offset = safePage * safeLimit;
     nameFilter = nameFilter.replace(/\*/g, '%');
 
     try {
-      let franchises = await this.query(connection, `SELECT id, name FROM franchise WHERE name LIKE ? LIMIT ${limit + 1} OFFSET ${offset}`, [nameFilter]);
+      let franchises = await this.query(connection, `SELECT id, name FROM franchise WHERE name LIKE ? LIMIT ${safeLimit + 1} OFFSET ${offset}`, [nameFilter]);
 
-      const more = franchises.length > limit;
+      const more = franchises.length > safeLimit;
       if (more) {
-        franchises = franchises.slice(0, limit);
+        franchises = franchises.slice(0, safeLimit);
       }
 
       for (const franchise of franchises) {
@@ -344,6 +442,14 @@ class DB {
     return (currentPage - 1) * [listPerPage];
   }
 
+  parsePaginationValue(value, defaultValue, min, max) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isInteger(parsed)) {
+      return defaultValue;
+    }
+    return Math.min(Math.max(parsed, min), max);
+  }
+
   getTokenSignature(token) {
     const parts = token.split('.');
     if (parts.length > 2) {
@@ -411,11 +517,24 @@ class DB {
         );
 
         if (rows.length === 0) {
-          const hashedPassword = await bcrypt.hash('admin', 10);
+          const bootstrapName = process.env.BOOTSTRAP_ADMIN_NAME;
+          const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL;
+          const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+          const isProd = process.env.NODE_ENV === 'production';
+          const useDefaults = !isProd && !bootstrapName && !bootstrapEmail && !bootstrapPassword;
+
+          if (!useDefaults && (!bootstrapName || !bootstrapEmail || !bootstrapPassword)) {
+            throw new Error('Missing bootstrap admin credentials');
+          }
+
+          const adminName = useDefaults ? '常用名字' : bootstrapName;
+          const adminEmail = useDefaults ? 'a@jwt.com' : bootstrapEmail;
+          const adminPassword = useDefaults ? 'admin' : bootstrapPassword;
+          const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
           const [result] = await connection.execute(
             `INSERT INTO user (name, email, password) VALUES (?, ?, ?)`,
-            ['常用名字', 'a@jwt.com', hashedPassword]
+            [adminName, adminEmail, hashedPassword]
           );
 
           await connection.execute(

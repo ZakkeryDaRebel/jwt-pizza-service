@@ -9,8 +9,8 @@ class Logger {
         path: req.originalUrl,
         method: req.method,
         statusCode: res.statusCode,
-        reqBody: req.body,
-        resBody: resBody,
+        reqBody: this.allowlistedBody(req.body),
+        resBodySize: typeof resBody === 'string' ? resBody.length : JSON.stringify(resBody || '').length,
       };
       const level = this.statusToLogLevel(res.statusCode);
       this.log(level, 'http', logData);
@@ -26,7 +26,7 @@ class Logger {
 
         this.log('info', 'db', {
         query,
-        params,
+        paramsCount: Array.isArray(params) ? params.length : 0,
         resultCount: Array.isArray(result) ? result.length : 1,
         });
 
@@ -34,7 +34,7 @@ class Logger {
     } catch (err) {
         this.log('error', 'db', {
         query,
-        params,
+        paramsCount: Array.isArray(params) ? params.length : 0,
         error: err.message,
         });
         throw err;
@@ -46,14 +46,19 @@ class Logger {
 
   try {
         const response = await fetch(url, options);
-        const body = await response.clone().json();
+        let responseBody = null;
+        try {
+          responseBody = await response.clone().json();
+        } catch {
+          responseBody = null;
+        }
 
         this.log('info', 'factory', {
         url,
         method: options.method,
-        reqBody: options.body ? JSON.parse(options.body) : null,
+        reqBody: options.body ? this.allowlistedBody(this.safeParse(options.body)) : null,
         status: response.status,
-        resBody: body,
+        resBodySize: responseBody ? JSON.stringify(responseBody).length : 0,
         latency: Date.now() - start,
         });
 
@@ -87,7 +92,7 @@ class Logger {
   }
 
   sanitize(logData) {
-  const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'jwt', 'apiKey', 'id', 'dinerId'];
+  const SENSITIVE_KEYS = ['password', 'token', 'authorization', 'jwt', 'apikey', 'secret', 'cookie', 'set-cookie', 'id', 'dinerid'];
 
   function deepSanitize(obj) {
     if (obj === null || obj === undefined) return obj;
@@ -116,7 +121,8 @@ class Logger {
     if (typeof obj === 'object') {
       const sanitized = {};
       for (const key in obj) {
-        if (SENSITIVE_KEYS.includes(key)) {
+        const normalizedKey = key.toLowerCase().replace(/[_-]/g, '');
+        if (SENSITIVE_KEYS.includes(normalizedKey)) {
           sanitized[key] = '*****';
         } else {
           sanitized[key] = deepSanitize(obj[key]);
@@ -131,6 +137,31 @@ class Logger {
   return JSON.stringify(deepSanitize(logData));
 }
 
+  safeParse(value) {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  allowlistedBody(body) {
+    if (!body || typeof body !== 'object') {
+      return null;
+    }
+    const allowedKeys = ['name', 'email', 'title', 'description', 'price', 'franchiseId', 'storeId', 'items'];
+    const sanitizedBody = {};
+    for (const key of allowedKeys) {
+      if (Object.prototype.hasOwnProperty.call(body, key)) {
+        sanitizedBody[key] = body[key];
+      }
+    }
+    return sanitizedBody;
+  }
+
   sendLogToGrafana(event) {
     const body = JSON.stringify(event);
     fetch(`${config.logging.endpointUrl}`, {
@@ -142,7 +173,7 @@ class Logger {
       },
     }).then((res) => {
       if (!res.ok) console.log('Failed to send log to Grafana');
-    });
+    }).catch(() => {});
   }
 }
 module.exports = new Logger();
