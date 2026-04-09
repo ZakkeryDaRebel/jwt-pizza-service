@@ -230,10 +230,6 @@ class DB {
     }
   }
 
-  /*
-    user is a json object? Has number id, string name, string email, list of roles (which is a role connected to a string), and iat (issued at timestamp)
-    order is a json object? Has an array of items (which has a number menuId, string description, and number price), then string storeId, and number franchiseId
-  */
   async validateOrder(user, order) {
     const connection = await this.getConnection();
     try {
